@@ -31,6 +31,128 @@ type ViewMode = 'expense' | 'income';
 
 const WEEKDAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
 
+// 年份列表选择器组件（自动滚动到选中年份）
+function YearScrollView({ selectedYear, onSelect }: { selectedYear: number; onSelect: (year: number) => void }) {
+  const cy = new Date().getFullYear();
+  const scrollRef = useRef<ScrollView>(null);
+  const years = Array.from({ length: 11 }, (_, i) => cy - 10 + i);
+  const selectedIndex = years.indexOf(selectedYear);
+
+  // 初始滚动到选中年份的位置
+  useEffect(() => {
+    if (scrollRef.current && selectedIndex >= 0) {
+      setTimeout(() => {
+        // 如果是最后一个或接近最后一个，直接滚到底部
+        if (selectedIndex >= years.length - 2) {
+          scrollRef.current?.scrollToEnd({ animated: false });
+        } else {
+          scrollRef.current?.scrollTo({
+            y: selectedIndex * 48,
+            animated: false,
+          });
+        }
+      }, 100);
+    }
+  }, []);
+
+  return (
+    <ScrollView ref={scrollRef} style={styles.yearList} showsVerticalScrollIndicator={false}>
+      {years.map((y) => {
+        const isCurrent = y === cy;
+        const label = isCurrent ? `${y}年 (本年)` : `${y}年`;
+        return (
+          <TouchableOpacity key={y} style={[styles.yearItem, y === selectedYear && styles.yearItemActive]} onPress={() => onSelect(y)}>
+            <Text style={[styles.yearItemText, y === selectedYear && styles.yearItemTextActive]}>{label}</Text>
+            {y === selectedYear && <Ionicons name="checkmark" size={18} color={COLORS.primaryDark} />}
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+// 周列表选择器组件（自动滚动到选中周）
+function WeekScrollView({ maxWeek, selectedWeek, currentWeek, onSelect }: { maxWeek: number; selectedWeek: number; currentWeek: number; onSelect: (week: number) => void }) {
+  const scrollRef = useRef<ScrollView>(null);
+  const weeks = Array.from({ length: maxWeek }, (_, i) => i + 1);
+  const selectedIndex = weeks.indexOf(selectedWeek);
+
+  // 初始滚动到选中周的位置
+  useEffect(() => {
+    if (scrollRef.current && selectedIndex >= 0) {
+      setTimeout(() => {
+        // 如果是最后一个或接近最后一个，直接滚到底部
+        if (selectedIndex >= weeks.length - 2) {
+          scrollRef.current?.scrollToEnd({ animated: false });
+        } else {
+          scrollRef.current?.scrollTo({
+            y: selectedIndex * 48,
+            animated: false,
+          });
+        }
+      }, 100);
+    }
+  }, []);
+
+  return (
+    <View style={{ maxHeight: 250 }}>
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false}>
+        {weeks.map((w) => {
+          const isCurrent = w === currentWeek;
+          const label = isCurrent ? `第${w}周 (本周)` : `第${w}周`;
+          return (
+            <TouchableOpacity key={w} style={[styles.yearItem, w === selectedWeek && styles.yearItemActive]} onPress={() => onSelect(w)}>
+              <Text style={[styles.yearItemText, w === selectedWeek && styles.yearItemTextActive]}>{label}</Text>
+              {w === selectedWeek && <Ionicons name="checkmark" size={18} color={COLORS.primaryDark} />}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+// 月份列表选择器组件（自动滚动到选中月）
+function MonthScrollView({ maxMonth, selectedMonth, currentMonth, onSelect }: { maxMonth: number; selectedMonth: number; currentMonth: number; onSelect: (month: number) => void }) {
+  const scrollRef = useRef<ScrollView>(null);
+  const months = Array.from({ length: maxMonth }, (_, i) => i + 1);
+  const selectedIndex = months.indexOf(selectedMonth);
+
+  // 初始滚动到选中月的位置
+  useEffect(() => {
+    if (scrollRef.current && selectedIndex >= 0) {
+      setTimeout(() => {
+        // 如果是最后一个或接近最后一个，直接滚到底部
+        if (selectedIndex >= months.length - 2) {
+          scrollRef.current?.scrollToEnd({ animated: false });
+        } else {
+          scrollRef.current?.scrollTo({
+            y: selectedIndex * 48,
+            animated: false,
+          });
+        }
+      }, 100);
+    }
+  }, []);
+
+  return (
+    <View style={{ maxHeight: 250 }}>
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false}>
+        {months.map((m) => {
+          const isCurrent = m === currentMonth;
+          const label = isCurrent ? `${m}月 (本月)` : `${m}月`;
+          return (
+            <TouchableOpacity key={m} style={[styles.yearItem, m === selectedMonth && styles.yearItemActive]} onPress={() => onSelect(m)}>
+              <Text style={[styles.yearItemText, m === selectedMonth && styles.yearItemTextActive]}>{label}</Text>
+              {m === selectedMonth && <Ionicons name="checkmark" size={18} color={COLORS.primaryDark} />}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 // 年份滚轮选择器组件
 function YearWheelPicker({ selectedYear, onSelect }: { selectedYear: number; onSelect: (year: number) => void }) {
   const now = new Date();
@@ -494,21 +616,13 @@ export default function StatisticsScreen() {
                     <>
                       {/* 年份滚轮选择器 */}
                       <YearWheelPicker selectedYear={year} onSelect={(y) => setYear(y)} />
-                      {/* 周列表 */}
-                      <View style={{ maxHeight: 250 }}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                          {Array.from({ length: maxWeek }, (_, i) => i + 1).map((w) => {
-                            const isCurrent = year === cw.year && w === cw.weekNum;
-                            const label = isCurrent ? `第${w}周 (本周)` : `第${w}周`;
-                            return (
-                              <TouchableOpacity key={w} style={[styles.yearItem, w === weekNum && styles.yearItemActive]} onPress={() => { setWeekNum(w); closePicker(); }}>
-                                <Text style={[styles.yearItemText, w === weekNum && styles.yearItemTextActive]}>{label}</Text>
-                                {w === weekNum && <Ionicons name="checkmark" size={18} color={COLORS.primaryDark} />}
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
+                      {/* 周列表（自动滚动到选中周） */}
+                      <WeekScrollView
+                        maxWeek={maxWeek}
+                        selectedWeek={weekNum}
+                        currentWeek={year === cw.year ? cw.weekNum : -1}
+                        onSelect={(w) => { setWeekNum(w); closePicker(); }}
+                      />
                     </>
                   );
                 })()
@@ -522,38 +636,21 @@ export default function StatisticsScreen() {
                     <>
                       {/* 年份滚轮选择器 */}
                       <YearWheelPicker selectedYear={year} onSelect={(y) => setYear(y)} />
-                      {/* 月份列表 */}
-                      <View style={{ maxHeight: 250 }}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                          {Array.from({ length: maxMonth }, (_, i) => i + 1).map((m) => {
-                            const isCurrent = year === cy && m === cm;
-                            const label = isCurrent ? `${m}月 (本月)` : `${m}月`;
-                            return (
-                              <TouchableOpacity key={m} style={[styles.yearItem, m === month && styles.yearItemActive]} onPress={() => { setMonth(m); closePicker(); }}>
-                                <Text style={[styles.yearItemText, m === month && styles.yearItemTextActive]}>{label}</Text>
-                                {m === month && <Ionicons name="checkmark" size={18} color={COLORS.primaryDark} />}
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                      </View>
+                      {/* 月份列表（自动滚动到选中月） */}
+                      <MonthScrollView
+                        maxMonth={maxMonth}
+                        selectedMonth={month}
+                        currentMonth={year === cy ? cm : -1}
+                        onSelect={(m) => { setMonth(m); closePicker(); }}
+                      />
                     </>
                   );
                 })()
               ) : (
-                (() => {
-                  const cy = new Date().getFullYear();
-                  return Array.from({ length: 11 }, (_, i) => cy - 10 + i).map((y) => {
-                    const isCurrent = y === cy;
-                    const label = isCurrent ? `${y}年 (本年)` : `${y}年`;
-                    return (
-                      <TouchableOpacity key={y} style={[styles.yearItem, y === year && styles.yearItemActive]} onPress={() => { setYear(y); closePicker(); }}>
-                        <Text style={[styles.yearItemText, y === year && styles.yearItemTextActive]}>{label}</Text>
-                        {y === year && <Ionicons name="checkmark" size={18} color={COLORS.primaryDark} />}
-                      </TouchableOpacity>
-                    );
-                  });
-                })()
+                <YearScrollView
+                  selectedYear={year}
+                  onSelect={(y) => { setYear(y); closePicker(); }}
+                />
               )}
             </ScrollView>
           </View>

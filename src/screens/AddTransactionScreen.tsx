@@ -76,7 +76,10 @@ export default function AddTransactionScreen() {
     const hideSub = Keyboard.addListener(hideEvent, () => {
       if (dismissTimerRef.current) { clearTimeout(dismissTimerRef.current); dismissTimerRef.current = null; }
       setKeyboardHeight(0);
-      setNoteFocused(false);
+      // 延迟重置 noteFocused，避免与 onFocus 冲突导致第一次点击无法弹出键盘
+      setTimeout(() => {
+        setNoteFocused(false);
+      }, 100);
     });
     return () => {
       showSub.remove();
