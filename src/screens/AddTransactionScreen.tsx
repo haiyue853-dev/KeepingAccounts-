@@ -39,6 +39,7 @@ export default function AddTransactionScreen() {
   const [frequentNotes, setFrequentNotes] = useState<string[]>([]);
   const [noteFocused, setNoteFocused] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showTagPanel, setShowTagPanel] = useState(false);
 
   const insets = useSafeAreaInsets();
   const windowHeight = Dimensions.get('window').height;
@@ -77,10 +78,9 @@ export default function AddTransactionScreen() {
       if (dismissTimerRef.current) { clearTimeout(dismissTimerRef.current); dismissTimerRef.current = null; }
       setKeyboardHeight(0);
       // 延迟重置 noteFocused，避免与 onFocus 冲突导致第一次点击无法弹出键盘
-      // 使用更长的延迟，确保标签选择完成
       setTimeout(() => {
         setNoteFocused(false);
-      }, 300);
+      }, 100);
     });
     return () => {
       showSub.remove();
@@ -568,14 +568,8 @@ export default function AddTransactionScreen() {
                 onPress={() => {
                   // 直接设置标签内容
                   setNote(fn);
-                  // 确保备注输入框保持焦点状态
-                  setNoteFocused(true);
-                  // 延迟聚焦输入框，确保状态更新完成
-                  setTimeout(() => {
-                    if (noteInputRef.current) {
-                      noteInputRef.current.focus();
-                    }
-                  }, 100);
+                  // 关闭键盘
+                  Keyboard.dismiss();
                 }}
               >
                 <Text style={[styles.recommendText, note === fn && styles.recommendTextActive]}>{fn}</Text>
@@ -584,6 +578,26 @@ export default function AddTransactionScreen() {
           </ScrollView>
         </Animated.View>
       </View>
+
+      {/* 标签选择区域 — 固定在数字键盘上方 */}
+      {frequentNotes.length > 0 && !noteFocused && (
+        <View style={styles.tagBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagContent}>
+            {frequentNotes.map((fn) => (
+              <TouchableOpacity
+                key={fn}
+                style={[styles.tagChip, note === fn && styles.tagChipActive]}
+                onPress={() => {
+                  // 直接设置标签内容
+                  setNote(fn);
+                }}
+              >
+                <Text style={[styles.tagText, note === fn && styles.tagTextActive]}>{fn}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* 数字键盘 — 备注聚焦时折叠为切换条，避免两个键盘抢位置 */}
       <Animated.View
@@ -905,4 +919,24 @@ const styles = StyleSheet.create({
   doneText: { fontSize: 12, fontWeight: '700', color: COLORS.text },
   batchText: { fontSize: 12, fontWeight: '700', color: COLORS.text },
   equalsText: { color: '#fff', fontSize: 22 },
+  // 标签栏样式
+  tagBar: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.divider,
+  },
+  tagContent: { gap: 8, alignItems: 'center' },
+  tagChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#E0E0E0',
+  },
+  tagChipActive: {
+    backgroundColor: COLORS.primary,
+  },
+  tagText: { fontSize: 13, color: COLORS.text },
+  tagTextActive: { color: '#fff', fontWeight: '600' },
 });
