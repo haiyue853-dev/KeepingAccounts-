@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/yw_1222_0335,@drawable/yw_1222,@drawable/yw_1222_china_production,@id/tt_mediation_*,@color/tt_mediation_*,@string/tt_mediation_*,@layout/ksad_*,@id/ksad_*,@style/ksad_*,
- @drawable/ksad_*,@string/ksad_*,@color/ksad_*,@attr/ksad_*,@dimen/ksad_*,@drawable/yw_1222_baichuan">
-</resources>

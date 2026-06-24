@@ -1,6 +1,0 @@
-<RelativeLayout http://schemas.android.com/apk/res/android="layout_width" http://schemas.android.com/apk/res/android="layout_height">
-  <LinearLayout http://schemas.android.com/apk/res/android="layout_width" http://schemas.android.com/apk/res/android="layout_height">
-    <androidx.recyclerview.widget.RecyclerView http://schemas.android.com/apk/res/android="layout_width" http://schemas.android.com/apk/res/android="layout_height" http://schemas.android.com/apk/res/android="layout_marginStart" http://schemas.android.com/apk/res/android="layout_marginEnd">
-    </?>
-  </?>
-</?>

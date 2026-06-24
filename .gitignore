@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# apk and decoded files
+*.apk
+apk_unpacked/
+apk_decoded_layouts/
+apk_icons/
