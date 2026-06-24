@@ -7,6 +7,21 @@ import { COLORS, MASCOTS, SHADOWS } from '../utils/constants';
 
 const APP_VERSION = '1.1.0';
 
+const UPDATE_LOG = [
+  {
+    version: '1.1.0',
+    date: '2026-06-24',
+    changes: [
+      '新增时间戳显示（24小时制）',
+      '新增批量记账功能（保存并再记一笔）',
+      '图表时间选择器不显示未来时间',
+      '修复编辑账单无法切换收支类型',
+      '常用标签自动按使用频率排序',
+      '修复备注输入框第一次点击不弹出键盘',
+    ],
+  },
+];
+
 const MENU_ITEMS = [
   { icon: 'pricetag-outline' as const, label: '分类管理', screen: 'Category' },
   { icon: 'wallet-outline' as const, label: '预算管理', screen: 'Budget' },
@@ -69,6 +84,25 @@ export default function ProfileScreen() {
             <Text style={styles.emailText}>hibozeng@qq.com</Text>
           </TouchableOpacity>
           <Text style={styles.aboutHint}>如有问题或建议，欢迎发送邮件反馈</Text>
+        </View>
+
+        {/* 更新日志 */}
+        <View style={styles.updateSection}>
+          <Text style={styles.updateTitle}>📝 更新日志</Text>
+          {UPDATE_LOG.map((log) => (
+            <View key={log.version} style={styles.updateItem}>
+              <View style={styles.updateHeader}>
+                <Text style={styles.updateVersion}>v{log.version}</Text>
+                <Text style={styles.updateDate}>{log.date}</Text>
+              </View>
+              {log.changes.map((change, index) => (
+                <View key={index} style={styles.changeRow}>
+                  <Text style={styles.changeDot}>•</Text>
+                  <Text style={styles.changeText}>{change}</Text>
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
       </ScrollView>
     </View>
@@ -147,4 +181,54 @@ const styles = StyleSheet.create({
   },
   emailText: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
   aboutHint: { fontSize: 11, color: COLORS.textLight, marginTop: 2 },
+  updateSection: {
+    marginHorizontal: 16,
+    marginBottom: 32,
+    padding: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    ...SHADOWS.card,
+  },
+  updateTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  updateItem: {
+    marginBottom: 16,
+  },
+  updateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  updateVersion: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  updateDate: {
+    fontSize: 12,
+    color: COLORS.textLight,
+  },
+  changeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+    paddingLeft: 4,
+  },
+  changeDot: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginRight: 8,
+    marginTop: 2,
+  },
+  changeText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    flex: 1,
+    lineHeight: 18,
+  },
 });
