@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.expo/
+.idea/
+dist-check/
+scripts/
+*.log
+*.md
+screenshot.png
+tmp-*.png
