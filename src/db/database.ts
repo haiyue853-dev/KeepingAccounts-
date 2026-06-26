@@ -89,14 +89,6 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
     await insertDefaultData(database);
   }
 
-  // 检查是否需要添加测试数据
-  const testNoteCount = await database.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM transactions WHERE note = '早餐'"
-  );
-  if (testNoteCount && testNoteCount.count === 0) {
-    await insertTestData(database);
-  }
-
 }
 
 async function insertDefaultData(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -157,29 +149,5 @@ async function insertDefaultData(database: SQLite.SQLiteDatabase): Promise<void>
       'INSERT INTO categories (name, icon, type, is_default, sort_order) VALUES (?, ?, ?, 1, ?)',
       [cat.name, cat.icon, 'income', cat.order]
     );
-  }
-}
-
-async function insertTestData(database: SQLite.SQLiteDatabase): Promise<void> {
-  // 获取餐饮分类ID
-  const foodCat = await database.getFirstAsync<{ id: number }>(
-    "SELECT id FROM categories WHERE name = '餐饮'"
-  );
-
-  if (foodCat) {
-    // 添加多条测试数据
-    const testNotes = ['早餐', '早餐', '早餐', '午餐', '午餐', '晚餐', '早餐'];
-    const today = new Date();
-
-    for (let i = 0; i < testNotes.length; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-      await database.runAsync(
-        'INSERT INTO transactions (book_id, category_id, amount, type, note, date) VALUES (?, ?, ?, ?, ?, ?)',
-        [1, foodCat.id, 15 + i * 5, 'expense', testNotes[i], dateStr]
-      );
-    }
   }
 }
