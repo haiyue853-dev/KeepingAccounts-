@@ -201,15 +201,14 @@ export default function TransactionInputPanel({
           styles.keyboard,
           {
             // ⚠️ 关键代码锁（受 PROJECT_NOTES.md #3 保护 - Lock-1）
-            // 参考提交 8b4990d v1.1.2 原始修复
-            // 收起状态用 50（不加 insets），展开状态 +insets.bottom
-            // 必须有 paddingBottom: insets.bottom 让虚拟按键区域为白底
+            // 收起状态高度 = 0（完全收起，不占位空间，避免大块空白）
+            // 展开状态高度 = 280 + insets.bottom（包含虚拟按键安全区）
             // 禁止修改：除非更新 PROJECT_NOTES.md 并记录原因
+            // 参考文档：PROJECT_NOTES.md #3 虚拟按键遮挡记账菜单 + 键盘收起空白
             height: keyboardAnim.interpolate({
               inputRange: [0, 1],
-              outputRange: [50, 280 + (insetsBottom || 0)],
+              outputRange: [0, 280 + (insetsBottom || 0)],
             }),
-            paddingBottom: insetsBottom || 0,
             backgroundColor: '#FFFFFF',
             opacity: keyboardAnim.interpolate({
               inputRange: [0, 1],
@@ -394,7 +393,7 @@ const styles = StyleSheet.create({
   // 键盘底部安全区域撑高
   keyboardSafeArea: {
     backgroundColor: '#FFFFFF',
-    height: 0,
+    height: 0,  // ⚠️ 锁 Lock-1 - 高度由调用处 insetsBottom 动态赋值
   },
   keyboardSwitchBar: {
     height: 80,

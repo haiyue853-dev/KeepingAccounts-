@@ -73,26 +73,48 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 
 ---
 
-### 3. 虚拟按键遮挡记账菜单
+### 3. 虚拟按键遮挡记账菜单 + 键盘收起空白
 
-**问题描述：** 在有虚拟按键的 Android 设备上，记账页面底部的菜单被虚拟按键遮挡，无法完全显示。
+**问题描述：** 两个相关问题：
+1. 在有虚拟按键的 Android 设备上，记账页面展开键盘时底部菜单被虚拟按键遮挡
+2. 备注聚焦（键盘收起）时键盘区域下方留有大片空白
 
-**原因：** 键盘区域在收起状态下的高度计算没有包含安全区域底部内边距。
+**根因：**
+1. 键盘区域高度计算没考虑 `insets.bottom`（安全区/虚拟按键）
+2. 键盘收起时仍保留 80px 占位高度，但内容被 `overflow:hidden` 裁掉，形成空白
 
-**修复方案：** 在 `TransactionInputPanel.tsx` 中，键盘收起状态的高度也应包含 `insetsBottom`。
+**修复方案：** 在 [TransactionInputPanel.tsx](src/components/TransactionInputPanel.tsx#L208-L211) 中：
+1. 键盘收起状态高度 = **0px**（完全收起，不占位空间）
+2. 键盘展开状态高度 = `280 + insets.bottom`（包含安全区，避免被虚拟按键遮挡）
+3. 数字键盘容器底部添加 `<View style={{ height: insetsBottom || 0, backgroundColor: '#FFFFFF' }} />` 撑高虚拟按键区域为白底
+4. `keyboard: { backgroundColor: '#ECECEC', paddingBottom: 0 }` 不要在 keyboard 容器上设 padding
 
 **相关文件：**
-- `src/components/TransactionInputPanel.tsx`
+- [src/components/TransactionInputPanel.tsx:208-211](src/components/TransactionInputPanel.tsx#L208-L211) （高度计算）
+- [src/components/TransactionInputPanel.tsx:393](src/components/TransactionInputPanel.tsx#L393) （keyboard 样式）
+- [src/components/TransactionInputPanel.tsx:279](src/components/TransactionInputPanel.tsx#L279) （底部安全区 View）
 
 **关键代码：**
 ```typescript
+// 1. 键盘容器 - 收起 0px，展开 280 + insets.bottom
 height: keyboardAnim.interpolate({
   inputRange: [0, 1],
-  outputRange: [50 + (insetsBottom || 0), 280 + (insetsBottom || 0)],
+  outputRange: [0, 280 + (insetsBottom || 0)],  // ⚠️ 收起 = 0，不是 80
 }),
+
+// 2. keyboard 样式 - 不要有 padding
+keyboard: { backgroundColor: '#ECECEC', paddingBottom: 0 },
+
+// 3. 底部安全区 View - 撑高虚拟按键区域
+<View style={{ height: insetsBottom || 0, backgroundColor: '#FFFFFF' }} />
 ```
 
-**参考提交：** `8b4990d feat: 键盘底部添加安全区域适配虚拟按键`
+**历史参考提交：**
+- ❌ `8b4990d` - 用 `[50, 280+insets]`，后来失效
+- ❌ `5cc8754` - 改成 `[0, 280]`，完全没有占位（半成品，丢失了安全区适配）
+- ⚠️ `707de41` - 用 `[50+insets, 280+insets]`（收起+insets 是错的，insets 应该只用于展开）
+- ⚠️ `135280c` - 用 `[50, 280+insets]`（收起 50 会导致空白）
+- ✅ **当前方案** - 用 `[0, 280+insets]`，收起 0 + 展开含 insets，正确
 
 ---
 
