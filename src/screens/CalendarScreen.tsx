@@ -175,7 +175,7 @@ export default function CalendarScreen() {
 
   useFocusEffect(useCallback(() => {
     loadCalendarData();
-  }, [loadCalendarData]));
+  }, [bookId, year, month]));
 
   useEffect(() => {
     loadSelectedDayTransactions();

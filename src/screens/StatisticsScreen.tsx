@@ -341,7 +341,7 @@ export default function StatisticsScreen() {
 
   useEffect(() => {
     loadData();
-  }, [timeMode]);
+  }, [timeMode, year, month, weekNum]);
 
   useFocusEffect(
     useCallback(() => {
