@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
   RefreshControl, SectionList, StatusBar, Modal,
@@ -427,13 +427,10 @@ const styles = StyleSheet.create({
 
   funcBar: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
     marginHorizontal: 16,
     marginTop: 10,
-    borderRadius: 18,
     paddingVertical: 10,
     paddingHorizontal: 2,
-    ...SHADOWS.card,
   },
   funcItem: { flex: 1, alignItems: 'center' },
   funcIconBg: {
