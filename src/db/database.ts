@@ -1,5 +1,4 @@
 import * as SQLite from 'expo-sqlite';
-import initialTransactions from '../data/initialTransactions.json';
 
 let db: SQLite.SQLiteDatabase | null = null;
 let initPromise: Promise<void> | null = null;
@@ -178,62 +177,6 @@ async function insertDefaultData(database: SQLite.SQLiteDatabase): Promise<void>
     await database.runAsync(
       'INSERT INTO categories (name, icon, type, is_default, sort_order) VALUES (?, ?, ?, 1, ?)',
       [cat.name, cat.icon, 'income', cat.order]
-    );
-  }
-
-  await insertInitialTransactions(database);
-}
-
-async function insertInitialTransactions(database: SQLite.SQLiteDatabase): Promise<void> {
-  const categoryMap = new Map<string, number>();
-  const existingCategories = await database.getAllAsync<{ id: number; name: string; type: string }>(
-    'SELECT id, name, type FROM categories'
-  );
-  for (const c of existingCategories) {
-    categoryMap.set(c.name, c.id);
-  }
-
-  const categoryMappings: Record<string, string> = {
-    '其它': '其他',
-    '代剪': '兼职',
-    '素材群': '兼职',
-    '餐饮': '餐饮',
-    '购物': '购物',
-    '交通': '交通',
-    '日用': '日用',
-    '娱乐': '娱乐',
-  };
-
-  for (const transaction of initialTransactions) {
-    let categoryName = transaction.category;
-    if (categoryMappings[categoryName]) {
-      categoryName = categoryMappings[categoryName];
-    }
-
-    let categoryId = categoryMap.get(categoryName);
-    if (!categoryId) {
-      const matchedCategory = Array.from(categoryMap.keys()).find(
-        key => key.includes(categoryName) || categoryName.includes(key)
-      );
-      if (matchedCategory) {
-        categoryId = categoryMap.get(matchedCategory);
-      }
-    }
-
-    if (!categoryId) {
-      const type = transaction.type === 'income' ? 'income' : 'expense';
-      const icon = type === 'income' ? '💵' : '📦';
-      const result = await database.runAsync(
-        'INSERT INTO categories (name, icon, type, is_default, sort_order) VALUES (?, ?, ?, 0, 99)',
-        [categoryName, icon, type]
-      );
-      categoryId = result.lastInsertRowId;
-      categoryMap.set(categoryName, categoryId);
-    }
-
-    await database.runAsync(
-      'INSERT INTO transactions (book_id, category_id, amount, type, note, date) VALUES (?, ?, ?, ?, ?, ?)',
-      [1, categoryId, transaction.amount, transaction.type, transaction.note, transaction.date]
     );
   }
 }

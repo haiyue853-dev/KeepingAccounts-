@@ -339,24 +339,22 @@ export default function StatisticsScreen() {
     }
   }, [timeMode, year, month, weekNum]);
 
-  // 使用 navigation.addListener 来监听页面焦点事件
-  const navigation = useNavigation();
+  useEffect(() => {
+    loadData();
+  }, [timeMode]);
 
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', () => {
-      // 如果弹窗刚刚关闭，不重置日期，也不加载数据
       if (isPickerJustClosed.current) {
         isPickerJustClosed.current = false;
         return;
       }
 
-      // 如果页面已经获得过焦点，不重置日期，只加载数据
       if (hasBeenFocused.current) {
         loadData();
         return;
       }
 
-      // 首次进入页面时，重置为当前日期
       hasBeenFocused.current = true;
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -367,18 +365,11 @@ export default function StatisticsScreen() {
       setMonth(currentMonth);
       setWeekNum(currentWeekNum);
 
-      // 使用当前日期加载数据
       loadData(currentYear, currentMonth, currentWeekNum);
-    });
-
-    const unsubscribeBlur = navigation.addListener('blur', () => {
-      // 页面失去焦点时，重置标志
-      hasBeenFocused.current = false;
     });
 
     return () => {
       unsubscribeFocus();
-      unsubscribeBlur();
     };
   }, [navigation, loadData]);
 

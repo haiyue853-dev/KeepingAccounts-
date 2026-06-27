@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, StatusBar,
-  FlatList, Modal, ScrollView,
+  FlatList, Modal, ScrollView, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,13 @@ import { Transaction } from '../models/Transaction';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GRID_PADDING = 16;
+const ITEM_MARGIN = 2;
+const COLUMNS = 7;
+const DAY_ITEM_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - ITEM_MARGIN * (COLUMNS - 1)) / COLUMNS;
+const DAY_ITEM_HEIGHT = DAY_ITEM_WIDTH * 1.3;
 
 interface DayData {
   date: string;
@@ -211,17 +218,21 @@ export default function CalendarScreen() {
               onPress={() => item.date && setSelectedDate(item.date)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.dayNumber, !item.date && styles.dayNumberEmpty]}>{item.day}</Text>
-              {item.hasData && (
-                <View style={styles.dayAmounts}>
-                  {item.income > 0 && (
-                    <Text style={styles.dayIncome}>+{formatAmount(item.income)}</Text>
-                  )}
-                  {item.expense > 0 && (
-                    <Text style={styles.dayExpense}>-{formatAmount(item.expense)}</Text>
-                  )}
+              <View style={styles.dayContent}>
+                <View style={styles.dayTop}>
+                  <Text style={[styles.dayNumber, !item.date && styles.dayNumberEmpty]}>{item.day}</Text>
                 </View>
-              )}
+                {item.hasData && (
+                  <View style={styles.dayBottom}>
+                    {item.income > 0 && (
+                      <Text style={styles.dayIncome}>+{formatAmount(item.income)}</Text>
+                    )}
+                    {item.expense > 0 && (
+                      <Text style={styles.dayExpense}>-{formatAmount(item.expense)}</Text>
+                    )}
+                  </View>
+                )}
+              </View>
               {isToday && item.date && (
                 <View style={styles.todayDot} />
               )}
@@ -360,31 +371,38 @@ const styles = StyleSheet.create({
   },
   weekdayText: { flex: 1, textAlign: 'center', fontSize: 12, color: COLORS.textSecondary, fontWeight: '500' },
   calendarGrid: { backgroundColor: COLORS.surface, paddingHorizontal: 16, paddingVertical: 8 },
-  calendarRow: { flexDirection: 'row', marginBottom: 6 },
+  calendarRow: { flexDirection: 'row', marginBottom: 4 },
   dayItem: {
-    flex: 1,
-    aspectRatio: 1,
+    width: DAY_ITEM_WIDTH,
+    height: DAY_ITEM_HEIGHT,
     borderRadius: 14,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingHorizontal: 4,
     backgroundColor: COLORS.background,
-    marginHorizontal: 2,
+    marginHorizontal: ITEM_MARGIN,
     borderWidth: 2,
     borderColor: 'transparent',
-    minHeight: 56,
+    overflow: 'hidden',
   },
   dayItemSelected: { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primary },
   dayItemEmpty: { opacity: 0.3 },
+  dayContent: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  dayTop: {
+    alignItems: 'center',
+  },
   dayNumber: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   dayNumberEmpty: { color: COLORS.textLight },
-  dayAmounts: {
+  dayBottom: {
     alignItems: 'center',
-    marginTop: 1,
     gap: 0,
     flexWrap: 'wrap',
     maxWidth: '100%',
+    paddingHorizontal: 2,
   },
   dayIncome: { fontSize: 8, color: COLORS.income, maxWidth: '100%', textAlign: 'center' },
   dayExpense: { fontSize: 8, color: COLORS.expense, maxWidth: '100%', textAlign: 'center' },

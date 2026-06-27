@@ -79,7 +79,8 @@ export class TransactionRepo {
   static async getMonthlySummary(bookId: number, year: number, month: number): Promise<{ income: number; expense: number }> {
     const db = await getDatabase();
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     const result = await db.getFirstAsync<{ income: number; expense: number }>(
       `SELECT
@@ -95,7 +96,8 @@ export class TransactionRepo {
   static async getCategorySummary(bookId: number, year: number, month: number): Promise<{ category_id: number; category_name: string; category_icon: string; type: string; total: number }[]> {
     const db = await getDatabase();
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     return db.getAllAsync(
       `SELECT t.category_id as category_id, c.name as category_name, c.icon as category_icon, t.type, SUM(t.amount) as total,
