@@ -3,10 +3,6 @@ import * as SQLite from 'expo-sqlite';
 let db: SQLite.SQLiteDatabase | null = null;
 let initPromise: Promise<void> | null = null;
 
-// ⚠️ 关键代码锁（受 PROJECT_NOTES.md #2 保护 - Lock-3）
-// 问题描述：应用启动后白屏，日志显示 "Invalid VFS state" 错误
-// 修复方案：连接有效性检查（SELECT 1）+ 初始化 Promise 锁防止并发
-// 禁止修改：除非更新 PROJECT_NOTES.md 并记录原因
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) {
     try {
@@ -43,7 +39,6 @@ export async function resetDatabase(): Promise<void> {
 }
 
 async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
-  // Web 平台的 wa-sqlite 不支持 execAsync 多条语句，需逐条执行
   const statements = [
     'PRAGMA journal_mode = WAL',
     'PRAGMA foreign_keys = ON',

@@ -206,12 +206,13 @@ export default function TransactionInputPanel({
             // 收起状态高度 = 0（完全收起，不占位空间，避免大块空白）
             // 展开状态高度 = 222 + insetsBottom（精确等于内容高度，无顶部空白）
             //   组成: opRow 38px + numArea 184px + 底部白底 insetsBottom = 222 + insetsBottom
+            // Web 平台额外增加 8px 缓冲，防止浏览器渲染差异导致底部按键被截断
             // 禁止修改：除非更新 PROJECT_NOTES.md 并记录原因
             // 参考文档：PROJECT_NOTES.md #3 虚拟按键遮挡记账菜单 + 键盘收起空白
             // 背景色由 styles.keyboard 提供 = '#ECECEC'，禁止用 inline 覆盖为白色
             height: keyboardAnim.interpolate({
               inputRange: [0, 1],
-              outputRange: [0, 222 + (insetsBottom || 0)],
+              outputRange: [0, 222 + (insetsBottom || 0) + (Platform.OS === 'web' ? 8 : 0)],
             }),
             opacity: keyboardAnim.interpolate({
               inputRange: [0, 1],

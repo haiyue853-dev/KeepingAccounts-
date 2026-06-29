@@ -337,7 +337,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.txIconBg}>
-              <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={20} color="#555" />
+              <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color="#555" />
             </View>
             <View style={styles.txInfo}>
               <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surface,
     marginHorizontal: 16,
-    paddingHorizontal: 14, paddingVertical: 12,
+    paddingHorizontal: 14, paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.divider,
   },
@@ -546,16 +546,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   txIconBg: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 34, height: 34, borderRadius: 17,
     backgroundColor: '#FFF3D0',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    justifyContent: 'center', alignItems: 'center', marginRight: 10,
   },
   txInfo: { flex: 1 },
-  txName: { fontSize: 15, color: COLORS.text, fontWeight: '500' },
-  txNote: { fontSize: 12, color: COLORS.textLight, marginTop: 2 },
+  txName: { fontSize: 14, color: COLORS.text, fontWeight: '500' },
+  txNote: { fontSize: 11, color: COLORS.textLight },
   txRight: { alignItems: 'flex-end' },
-  txAmount: { fontSize: 15, fontWeight: '600' },
-  txTime: { fontSize: 11, color: COLORS.textLight, marginTop: 2 },
+  txAmount: { fontSize: 14, fontWeight: '600' },
+  txTime: { fontSize: 10, color: COLORS.textLight },
   income: { color: COLORS.income },
   expense: { color: COLORS.expense },
 
