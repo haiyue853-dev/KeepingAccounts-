@@ -64,11 +64,7 @@ export default function App() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>加载中...</Text>
-      </View>
-    );
+    return <View style={styles.loadingContainer} />;
   }
 
   if (initError) {

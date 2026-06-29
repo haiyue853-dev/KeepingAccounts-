@@ -352,7 +352,10 @@ export class ImportExportService {
     ]);
 
     if (dateCol === -1) {
-      throw new Error('CSV 格式不兼容：找不到日期列（支持的列名：日期、date、交易日期等）');
+      // 没有日期列时，使用当前日期作为默认值
+      const today = new Date();
+      const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      return this.importFromCsvWithDefaultDate(bookId, lines, headers, typeCol, categoryCol, subCategoryCol, amountCol, noteCol, categoryMap, defaultDate);
     }
 
     if (amountCol === -1) {
@@ -368,6 +371,7 @@ export class ImportExportService {
 
     let imported = 0;
     let skipped = 0;
+    const skipReasons: string[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
@@ -415,8 +419,17 @@ export class ImportExportService {
           const [, y, m, d] = dateMatch2;
           dateStr = `${y}-${m}-${d}`;
         } else {
-          skipped++;
-          continue;
+          // 尝试解析 Excel 日期序列号（如 45832 → 2025-07-01）
+          const serialNum = parseFloat(dateStr);
+          if (!isNaN(serialNum) && serialNum > 30000 && serialNum < 100000) {
+            const excelEpoch = new Date(1899, 11, 30);
+            const converted = new Date(excelEpoch.getTime() + serialNum * 86400000);
+            dateStr = `${converted.getFullYear()}-${String(converted.getMonth() + 1).padStart(2, '0')}-${String(converted.getDate()).padStart(2, '0')}`;
+          } else {
+            // 日期无法解析，跳过该行
+            skipped++;
+            continue;
+          }
         }
       }
 
@@ -438,12 +451,105 @@ export class ImportExportService {
 
       if (!categoryId || isNaN(amount) || amount <= 0) {
         skipped++;
+        skipReasons.push(`第${i + 1}行: 分类"${categoryName}"无法匹配, 金额"${amountStr}"`);
         continue;
       }
 
       await db.runAsync(
         'INSERT INTO transactions (book_id, category_id, amount, type, note, date) VALUES (?, ?, ?, ?, ?, ?)',
         [bookId, categoryId, amount, type, note, dateStr]
+      );
+      imported++;
+    }
+
+    if (skipReasons.length > 0 && imported === 0) {
+      throw new Error(`导入失败，全部跳过。\n跳过原因示例：\n${skipReasons.slice(0, 5).join('\n')}`);
+    }
+
+    return { imported, skipped };
+  }
+
+  private static async importFromCsvWithDefaultDate(
+    bookId: number,
+    lines: string[],
+    headers: string[],
+    typeCol: number,
+    categoryCol: number,
+    subCategoryCol: number,
+    amountCol: number,
+    noteCol: number,
+    categoryMap: Map<string, number>,
+    defaultDate: string
+  ): Promise<{ imported: number; skipped: number }> {
+    const db = await getDatabase();
+    let imported = 0;
+    let skipped = 0;
+
+    const parseCsvLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current);
+      return result;
+    };
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+
+      const values = parseCsvLine(line);
+
+      const typeLabel = typeCol >= 0 ? values[typeCol]?.trim() || '' : '';
+      let categoryName = categoryCol >= 0 ? values[categoryCol]?.trim() || '' : '';
+      const subCategoryName = subCategoryCol >= 0 ? values[subCategoryCol]?.trim() || '' : '';
+      const amountStr = values[amountCol]?.trim() || '';
+      const note = noteCol >= 0 ? values[noteCol]?.trim() || '' : '';
+
+      if (subCategoryName && !categoryMap.has(categoryName) && categoryMap.has(subCategoryName)) {
+        categoryName = subCategoryName;
+      }
+
+      let type = '';
+      if (typeLabel) {
+        if (typeLabel.includes('收入') || typeLabel.toLowerCase().includes('income') || typeLabel === '+') {
+          type = 'income';
+        } else if (typeLabel.includes('支出') || typeLabel.toLowerCase().includes('expense') || typeLabel === '-') {
+          type = 'expense';
+        }
+      }
+
+      const amountNum = parseFloat(amountStr.replace(/[^\d.-]/g, ''));
+      if (!type) {
+        type = amountNum < 0 ? 'expense' : 'expense';
+      }
+
+      if (!categoryMap.has(categoryName)) {
+        skipped++;
+        continue;
+      }
+
+      const categoryId = categoryMap.get(categoryName)!;
+      const finalAmount = Math.abs(amountNum);
+
+      await db.runAsync(
+        'INSERT INTO transactions (book_id, category_id, amount, type, note, date) VALUES (?, ?, ?, ?, ?, ?)',
+        [bookId, categoryId, finalAmount, type, note, defaultDate]
       );
       imported++;
     }
@@ -591,6 +697,7 @@ export class ImportExportService {
     const db = await getDatabase();
     let imported = 0;
     let skipped = 0;
+    const skipReasons: string[] = [];
 
     // Build category name -> id map
     const categoryMap = new Map<string, number>();
@@ -667,6 +774,7 @@ export class ImportExportService {
 
       if (!categoryId || isNaN(t.amount) || t.amount <= 0) {
         skipped++;
+        skipReasons.push(`分类"${categoryName}"无法匹配, 金额"${t.amount}"`);
         continue;
       }
 
@@ -677,101 +785,59 @@ export class ImportExportService {
       imported++;
     }
 
+    if (skipReasons.length > 0 && imported === 0) {
+      throw new Error(`导入失败，全部跳过。\n跳过原因示例：\n${skipReasons.slice(0, 5).join('\n')}`);
+    }
+
     return { imported, skipped };
   }
 
   private static detectAndConvertEncoding(bytes: number[]): string {
-    let isUtf8 = true;
-    let hasGbkPattern = false;
-
-    for (let i = 0; i < bytes.length; i++) {
-      const b = bytes[i];
-      if (b >= 0x80) {
-        if (b >= 0xF8) {
-          isUtf8 = false;
-          break;
-        }
-        if ((b & 0xE0) === 0xC0) {
-          if (i + 1 >= bytes.length) { isUtf8 = false; break; }
-          const b2 = bytes[i + 1];
-          if ((b2 & 0xC0) !== 0x80) { isUtf8 = false; break; }
-          i++;
-        } else if ((b & 0xF0) === 0xE0) {
-          if (i + 2 >= bytes.length) { isUtf8 = false; break; }
-          const b2 = bytes[i + 1];
-          const b3 = bytes[i + 2];
-          if ((b2 & 0xC0) !== 0x80 || (b3 & 0xC0) !== 0x80) { isUtf8 = false; break; }
-          i += 2;
-        } else if ((b & 0xF8) === 0xF0) {
-          if (i + 3 >= bytes.length) { isUtf8 = false; break; }
-          const b2 = bytes[i + 1];
-          const b3 = bytes[i + 2];
-          const b4 = bytes[i + 3];
-          if ((b2 & 0xC0) !== 0x80 || (b3 & 0xC0) !== 0x80 || (b4 & 0xC0) !== 0x80) { isUtf8 = false; break; }
-          i += 3;
-        } else {
-          isUtf8 = false;
-          hasGbkPattern = true;
-          break;
-        }
-      }
+    // Check BOM first
+    if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+      return new TextDecoder('utf-8').decode(new Uint8Array(bytes.slice(3)));
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+      return new TextDecoder('utf-16le').decode(new Uint8Array(bytes.slice(2)));
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+      return new TextDecoder('utf-16be').decode(new Uint8Array(bytes.slice(2)));
     }
 
-    if (!isUtf8 && hasGbkPattern) {
-      return this.gbkToUtf8(bytes);
-    }
-
-    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
-  }
-
-  private static gbkToUtf8(bytes: number[]): string {
-    const result: number[] = [];
-
-    for (let i = 0; i < bytes.length; i++) {
-      const b = bytes[i];
-
-      if (b < 0x80) {
-        result.push(b);
-        continue;
-      }
-
-      if (i + 1 >= bytes.length) {
-        result.push(0xFFFD);
-        continue;
-      }
-
-      const b2 = bytes[i + 1];
-      let code = 0;
-
-      if (b >= 0x81 && b <= 0xFE && b2 >= 0x40 && b2 <= 0xFE) {
-        if (b <= 0xA0) {
-          code = (b - 0x81) * 190 + (b2 - 0x40);
-        } else {
-          code = (b - 0xA1) * 190 + (b2 - 0x40);
-        }
-
-        if (code < 0) {
-          result.push(0xFFFD);
-        } else if (code < 0x100) {
-          result.push(0x00 + code);
-        } else if (code < 0x4E00) {
-          result.push(0xFFFD);
-        } else {
-          const charCode = 0x4E00 + code - 0x100;
-          if (charCode <= 0xFFFF) {
-            result.push(charCode);
-          } else {
-            const high = Math.floor((charCode - 0x10000) / 0x400) + 0xD800;
-            const low = ((charCode - 0x10000) % 0x400) + 0xDC00;
-            result.push(high, low);
+    // Try UTF-8 first
+    try {
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
+      // If it contains Chinese characters, verify it's not GBK misidentified as UTF-8
+      if (/[\u4e00-\u9fff]/.test(text)) {
+        // Check for common GBK false positives
+        for (let i = 0; i < bytes.length - 1; i++) {
+          const b1 = bytes[i], b2 = bytes[i + 1];
+          // GBK lead byte 0x81-0xFE followed by trail byte that makes invalid UTF-8
+          if (b1 >= 0x81 && b1 <= 0xFE && b2 >= 0x40 && b2 <= 0xFE && b2 !== 0x7F) {
+            // This could be GBK - check if the UTF-8 decoded char is a replacement char or weird
+            const utf8Char = text.charAt(i);
+            if (utf8Char === '\uFFFD' || utf8Char.charCodeAt(0) > 0xFFFF) {
+              throw new Error('GBK detected');
+            }
           }
         }
-        i++;
-      } else {
-        result.push(0xFFFD);
+      }
+      return text;
+    } catch {
+      // Try GBK with TextDecoder (React Native supports this on Android/iOS)
+      try {
+        return new TextDecoder('gbk').decode(new Uint8Array(bytes));
+      } catch {
+        // Fallback: try gbk, gb2312, gb18030
+        for (const enc of ['gb18030', 'gb2312', 'windows-1252']) {
+          try {
+            return new TextDecoder(enc).decode(new Uint8Array(bytes));
+          } catch { /* continue */ }
+        }
       }
     }
 
-    return String.fromCodePoint(...result);
+    // Last resort: treat as UTF-8
+    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
   }
 }

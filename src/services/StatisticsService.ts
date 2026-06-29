@@ -9,6 +9,7 @@ export interface MonthlySummary {
 }
 
 export interface CategorySummary {
+  category_id: number;
   category_name: string;
   category_icon: string;
   type: string;
@@ -63,6 +64,7 @@ export class StatisticsService {
     }
 
     return raw.map((item: any) => ({
+      category_id: item.category_id,
       category_name: item.category_name,
       category_icon: item.category_icon,
       type: item.type,
@@ -205,6 +207,7 @@ export class StatisticsService {
     }
 
     return raw.map((item: any) => ({
+      category_id: item.category_id,
       category_name: item.category_name,
       category_icon: item.category_icon,
       type: item.type,
@@ -294,6 +297,7 @@ export class StatisticsService {
     }
 
     return raw.map((item: any) => ({
+      category_id: item.category_id,
       category_name: item.category_name,
       category_icon: item.category_icon,
       type: item.type,

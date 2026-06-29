@@ -93,15 +93,20 @@ export class DeepSeekTransactionParser {
     try {
       const parsed = JSON.parse(jsonStr);
       const items = Array.isArray(parsed) ? parsed : [parsed];
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       return items.map((item: any) => {
         const rawDate = String(item.date || '').trim();
-        let date: string | undefined;
+        let date: string;
         if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
           date = rawDate;
         } else if (rawDate) {
           // 尝试解析中文日期（如"昨天"、"上周五"等）
           const parsed = parseChineseDate(rawDate);
-          if (parsed) date = parsed;
+          date = parsed || todayStr;
+        } else {
+          // 没有提到日期，使用当前日期
+          date = todayStr;
         }
         return {
           amount: Number(item.amount) || 0,

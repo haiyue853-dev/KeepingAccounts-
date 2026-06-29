@@ -2,7 +2,7 @@
   "expo": {
     "name": "哈基咪记账",
     "slug": "bookkeeping-app",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

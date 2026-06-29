@@ -11,7 +11,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import Svg, { Circle, G } from 'react-native-svg';
 import { StatisticsService, CategorySummary, DailySummary, RangeSummary } from '../services/StatisticsService';
@@ -19,6 +19,7 @@ import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { COLORS, CHART_COLORS, MASCOTS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
+import { CategoryIcon } from '../components/AppIcon';
 
 const screenWidth = Dimensions.get('window').width;
 const CIRCLE_SIZE = 138;
@@ -221,7 +222,7 @@ function YearWheelPicker({ selectedYear, onSelect }: { selectedYear: number; onS
   );
 }
 
-function MiniDonut({ data, total }: { data: CategorySummary[]; total: number }) {
+function MiniDonut({ data, total, type }: { data: CategorySummary[]; total: number; type: 'expense' | 'income' }) {
   let offset = 0;
   const entries = data;
 
@@ -260,7 +261,7 @@ function MiniDonut({ data, total }: { data: CategorySummary[]; total: number }) 
         </G>
       </Svg>
       <View style={styles.donutCenter}>
-        <Text style={styles.donutLabel}>总支出</Text>
+        <Text style={styles.donutLabel}>{type === 'expense' ? '总支出' : '总收入'}</Text>
         <Text style={styles.donutValue}>{formatAmount(total)}</Text>
       </View>
     </View>
@@ -269,6 +270,7 @@ function MiniDonut({ data, total }: { data: CategorySummary[]; total: number }) 
 
 export default function StatisticsScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const [timeMode, setTimeMode] = useState<TimeMode>('month');
   const [viewMode, setViewMode] = useState<ViewMode>('expense');
   const [year, setYear] = useState(() => {
@@ -483,25 +485,29 @@ export default function StatisticsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.summaryCard}>
+        <View style={styles.summaryCardCompact}>
           <View>
-            <Text style={styles.summaryLabel}>
+            <Text style={styles.summaryLabelCompact}>
               {(() => {
                 const now = new Date();
                 const cy = now.getFullYear();
                 const cm = now.getMonth() + 1;
                 const cw = StatisticsService.dateToWeek(now);
                 const type = viewMode === 'expense' ? '支出' : '收入';
-                if (timeMode === 'week' && year === cw.year && weekNum === cw.weekNum) return `本周${type}`;
-                if (timeMode === 'month' && year === cy && month === cm) return `本月${type}`;
-                if (timeMode === 'year' && year === cy) return `本年${type}`;
-                return `总${type}`;
+                if (timeMode === 'week') {
+                  if (year === cw.year && weekNum === cw.weekNum) return `本周${type}`;
+                  return `${year}年第${weekNum}周${type}`;
+                }
+                if (timeMode === 'month') {
+                  if (year === cy && month === cm) return `本月${type}`;
+                  return `${year}年${month}月${type}`;
+                }
+                if (year === cy) return `本年${type}`;
+                return `${year}年${type}`;
               })()}
             </Text>
-            <Text style={styles.summaryAmount}>¥{formatAmount(total)}</Text>
-            <Text style={styles.summaryDaily}>日均支出 ¥{formatAmount(rangeSummary?.dailyAvg ?? 0)}</Text>
+            <Text style={styles.summaryAmountCompact}>¥{formatAmount(total)}</Text>
           </View>
-          <Image source={MASCOTS.chart} style={styles.summaryMascot} resizeMode="contain" />
         </View>
 
         <View style={styles.segmentRow}>
@@ -526,7 +532,7 @@ export default function StatisticsScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{viewMode === 'expense' ? '支出分类占比' : '收入分类占比'}</Text>
           <View style={styles.donutSection}>
-            <MiniDonut data={filteredCategories} total={total} />
+            <MiniDonut data={filteredCategories} total={total} type={viewMode} />
             <View style={styles.legendList}>
               {filteredCategories.map((cat, index) => (
                 <View key={`${cat.category_name}-${index}`} style={styles.legendRow}>
@@ -551,7 +557,7 @@ export default function StatisticsScreen() {
           {chart ? (
             <LineChart
               data={chart}
-              width={Math.max(220, chartWidth - 16)}
+              width={Math.max(200, chartWidth - 32)}
               height={190}
               yAxisLabel="¥"
               yLabelsOffset={18}
@@ -577,7 +583,7 @@ export default function StatisticsScreen() {
               bezier
               style={[
                 styles.chart,
-                { paddingRight: 32, marginRight: 0, paddingLeft: 0, marginLeft: 0 },
+                { paddingRight: 32, marginRight: 0, paddingLeft: 0, marginLeft: 8 },
               ]}
               fromZero
             />
@@ -585,6 +591,57 @@ export default function StatisticsScreen() {
             <View style={styles.noDataChart}>
               <Ionicons name="analytics-outline" size={44} color={COLORS.textLight} />
               <Text style={styles.noDataText}>暂无趋势数据</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{viewMode === 'expense' ? '支出排行榜' : '收入排行榜'}</Text>
+          {filteredCategories.length === 0 ? (
+            <View style={styles.noDataChart}>
+              <Ionicons name="podium-outline" size={44} color={COLORS.textLight} />
+              <Text style={styles.noDataText}>暂无数据</Text>
+            </View>
+          ) : (
+            <View style={styles.rankList}>
+              {filteredCategories.slice(0, 10).map((cat, index) => {
+                const handlePress = () => {
+                  if (rangeSummary) {
+                    navigation.navigate('CategoryDetail' as never, {
+                      categoryData: {
+                        id: cat.category_id,
+                        name: cat.category_name,
+                        icon: cat.category_icon,
+                        total: cat.total,
+                      },
+                      dateRange: {
+                        startDate: rangeSummary.startDate,
+                        endDate: rangeSummary.endDate,
+                      },
+                    } as never);
+                  }
+                };
+                return (
+                  <TouchableOpacity
+                    key={cat.category_id}
+                    style={[styles.rankItem, index === filteredCategories.slice(0, 10).length - 1 && styles.rankItemLast]}
+                    onPress={handlePress}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.rankIconBg}>
+                      <CategoryIcon categoryName={cat.category_name} iconKey={cat.category_icon} size={18} color={COLORS.text} />
+                    </View>
+                    <View style={styles.rankContent}>
+                      <Text style={styles.rankName} numberOfLines={1}>{cat.category_name}</Text>
+                      <Text style={styles.rankCount}>{cat.count} 笔</Text>
+                    </View>
+                    <View style={styles.rankAmount}>
+                      <Text style={styles.rankAmountText}>¥{formatAmount(cat.total)}</Text>
+                      <Text style={styles.rankPercent}>{cat.percentage.toFixed(1)}%</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </View>
@@ -676,6 +733,15 @@ const styles = StyleSheet.create({
   },
   monthPillText: { fontSize: 12, fontWeight: '800', color: COLORS.text },
   scrollContent: { padding: 16, paddingBottom: 24 },
+  summaryCardCompact: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...SHADOWS.card,
+  },
   summaryCard: {
     minHeight: 112,
     backgroundColor: COLORS.surface,
@@ -687,6 +753,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...SHADOWS.card,
   },
+  summaryLabelCompact: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
+  summaryAmountCompact: { fontSize: 22, color: COLORS.text, fontWeight: '900', marginTop: 6 },
   summaryLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
   summaryAmount: { fontSize: 25, color: COLORS.text, fontWeight: '900', marginTop: 8 },
   summaryDaily: { fontSize: 12, color: COLORS.textSecondary, marginTop: 8 },
@@ -779,5 +847,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.text,
+  },
+  rankList: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  rankItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.divider,
+  },
+  rankItemLast: {
+    borderBottomWidth: 0,
+  },
+  rankIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF3D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  rankContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  rankName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  rankCount: {
+    fontSize: 12,
+    color: COLORS.textLight,
+  },
+  rankAmount: {
+    alignItems: 'flex-end',
+  },
+  rankAmountText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  rankPercent: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    marginTop: 2,
   },
 });

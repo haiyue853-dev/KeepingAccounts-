@@ -190,4 +190,19 @@ export class TransactionRepo {
     const rows = await db.getAllAsync<{ note: string; cnt: number }>(sql, params);
     return rows.map((r) => r.note);
   }
+
+  /**
+   * 获取特定分类和日期范围内的所有交易（用于分类详情页）
+   */
+  static async getByCategoryAndDateRange(bookId: number, categoryId: number, startDate: string, endDate: string): Promise<Transaction[]> {
+    const db = await getDatabase();
+    return db.getAllAsync<Transaction>(
+      `SELECT t.*, c.name as category_name, c.icon as category_icon
+       FROM transactions t
+       LEFT JOIN categories c ON t.category_id = c.id
+       WHERE t.book_id = ? AND t.category_id = ? AND t.date >= ? AND t.date <= ?
+       ORDER BY t.amount DESC`,
+      [bookId, categoryId, startDate, endDate]
+    );
+  }
 }
