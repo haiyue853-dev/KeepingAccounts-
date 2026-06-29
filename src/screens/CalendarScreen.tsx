@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, StatusBar,
-  FlatList, Modal, ScrollView, Dimensions,
+  Modal, ScrollView, Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -272,47 +272,45 @@ export default function CalendarScreen() {
         ))}
       </View>
 
-      <View style={styles.calendarGrid}>
-        {renderCalendarGrid()}
-      </View>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.calendarGrid}>
+          {renderCalendarGrid()}
+        </View>
 
-      {selectedDate && (
-        <View style={styles.detailSection}>
-          <View style={styles.detailHeader}>
-            <Text style={styles.detailDate}>{selectedDate} {getWeekday(selectedDate)}</Text>
-            <View style={styles.detailSummary}>
-              <Text style={styles.detailIncome}>收入: {formatAmount(selectedDaySummary.income)}</Text>
-              <Text style={styles.detailExpense}>支出: {formatAmount(selectedDaySummary.expense)}</Text>
-            </View>
-          </View>
-
-          <FlatList
-            data={selectedDayTransactions}
-            renderItem={({ item }) => (
-              <View style={styles.transactionItem}>
-                <View style={styles.txIconBg}>
-                  <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={20} color="#555" />
-                </View>
-                <View style={styles.txInfo}>
-                  <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
-                  {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
-                </View>
-                <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
-                  {item.type === 'income' ? '+' : '-'}{formatAmount(item.amount)}
-                </Text>
+        {selectedDate && (
+          <View style={styles.detailSection}>
+            <View style={styles.detailHeader}>
+              <Text style={styles.detailDate}>{selectedDate} {getWeekday(selectedDate)}</Text>
+              <View style={styles.detailSummary}>
+                <Text style={styles.detailIncome}>收入: {formatAmount(selectedDaySummary.income)}</Text>
+                <Text style={styles.detailExpense}>支出: {formatAmount(selectedDaySummary.expense)}</Text>
               </View>
-            )}
-            keyExtractor={(item) => String(item.id)}
-            contentContainerStyle={styles.transactionList}
-            ListEmptyComponent={
+            </View>
+
+            {selectedDayTransactions.length > 0 ? (
+              selectedDayTransactions.map((item) => (
+                <View key={String(item.id)} style={styles.transactionItem}>
+                  <View style={styles.txIconBg}>
+                    <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={20} color="#555" />
+                  </View>
+                  <View style={styles.txInfo}>
+                    <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
+                    {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
+                  </View>
+                  <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
+                    {item.type === 'income' ? '+' : '-'}{formatAmount(item.amount)}
+                  </Text>
+                </View>
+              ))
+            ) : (
               <View style={styles.empty}>
                 <Ionicons name="document-text-outline" size={44} color={COLORS.textLight} />
                 <Text style={styles.emptyText}>当天没有记录</Text>
               </View>
-            }
-          />
-        </View>
-      )}
+            )}
+          </View>
+        )}
+      </ScrollView>
 
       <Modal visible={showMonthPicker} transparent animationType="fade" onRequestClose={() => setShowMonthPicker(false)}>
         <TouchableOpacity style={styles.monthOverlay} activeOpacity={1} onPress={() => setShowMonthPicker(false)}>
@@ -345,6 +343,8 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  scrollContainer: { flex: 1 },
+  scrollContent: { paddingBottom: 48 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: COLORS.primary,
   },
-  detailSection: { flex: 1, backgroundColor: COLORS.background, marginTop: 8 },
+  detailSection: { backgroundColor: COLORS.background, marginTop: 8, paddingBottom: 16 },
   detailHeader: {
     backgroundColor: COLORS.surface,
     marginHorizontal: 16,
