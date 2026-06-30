@@ -129,14 +129,13 @@ export default function BudgetScreen() {
   };
 
   const handleCategoryBudgetDelete = async (categoryId: number) => {
-    const confirmed = await showThemedConfirm('删除分类预算', '确定要删除这个分类的预算设置吗？');
-    if (!confirmed) return;
+    showThemedConfirm('删除分类预算', '确定要删除这个分类的预算设置吗？', async () => {
+      const books = await AccountBookRepo.getAll();
+      if (!books.length) return;
 
-    const books = await AccountBookRepo.getAll();
-    if (!books.length) return;
-
-    await BudgetRepo.deleteCategoryBudget(books[0].id, categoryId, year, month);
-    loadData();
+      await BudgetRepo.deleteCategoryBudget(books[0].id, categoryId, year, month);
+      loadData();
+    });
   };
 
   const getCategorySpent = (categoryId: number) => {

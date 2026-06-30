@@ -1,6 +1,6 @@
 {
   "name": "temp_init",
-  "version": "1.2.5",
+  "version": "1.2.7",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~56.0.15",
