@@ -17,6 +17,8 @@ import { CategoryIcon } from '../components/AppIcon';
 import DatePickerWheel from '../components/DatePickerWheel';
 import TransactionInputPanel from '../components/TransactionInputPanel';
 
+type CalcToken = number | '+' | '-' | '×' | '÷';
+
 export default function AddTransactionScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -44,6 +46,7 @@ export default function AddTransactionScreen() {
   const [prevValue, setPrevValue] = useState<number | null>(null);
   const [pendingOp, setPendingOp] = useState<string | null>(null);
   const [freshOp, setFreshOp] = useState(false);
+  const [calcTokens, setCalcTokens] = useState<CalcToken[]>([]);
 
   // 金额跳动动画
   const amountScale = useRef(new Animated.Value(1)).current;
@@ -243,6 +246,47 @@ export default function AddTransactionScreen() {
     return result;
   };
 
+  const evaluateExpression = (tokens: CalcToken[]): number => {
+    if (tokens.length === 0) return 0;
+
+    let current = Number(tokens[0]) || 0;
+    const values: number[] = [];
+    const ops: string[] = [];
+
+    for (let i = 1; i < tokens.length; i += 2) {
+      const op = String(tokens[i]);
+      const next = Number(tokens[i + 1]) || 0;
+
+      if (op === '×' || op === '÷') {
+        current = calc(current, next, op);
+      } else {
+        values.push(current);
+        ops.push(op);
+        current = next;
+      }
+    }
+
+    values.push(current);
+    return ops.reduce((total, op, index) => calc(total, values[index + 1], op), values[0]);
+  };
+
+  const resolvePendingAmount = (): string => {
+    if (calcTokens.length === 0) return amount;
+
+    const current = parseFloat(amount) || 0;
+    const tokens = freshOp ? calcTokens.slice(0, -1) : [...calcTokens, current];
+    if (tokens.length === 0) return amount;
+
+    const result = evaluateExpression(tokens);
+    const resultStr = fmtResult(result);
+    setAmount(resultStr);
+    setCalcTokens([]);
+    setPrevValue(null);
+    setPendingOp(null);
+    setFreshOp(false);
+    return resultStr;
+  };
+
   /** 格式化数字：去掉末尾多余的 0，并限制长度 */
   const fmtResult = (n: number): string => {
     if (!isFinite(n) || isNaN(n)) return '0';
@@ -303,29 +347,26 @@ export default function AddTransactionScreen() {
       return;
     }
 
-    if (prevValue !== null && pendingOp && !freshOp) {
-      // 已有上一步运算且输入了新数字 → 先算出中间结果，大字跳动
-      const result = calc(prevValue, current, pendingOp);
-      setAmount(fmtResult(result));
-      setPrevValue(result);
-      flashAmount();
-    } else {
-      setPrevValue(current);
-    }
+    const nextTokens = freshOp && calcTokens.length > 0
+      ? [...calcTokens.slice(0, -1), op as CalcToken]
+      : [...calcTokens, current, op as CalcToken];
 
+    setCalcTokens(nextTokens);
+    setPrevValue(Number(nextTokens[0]) || current);
     setPendingOp(op);
     setFreshOp(true);
   };
 
   /** 按下等号 — 算出最终结果，恢复菜单让用户确认保存 */
   const handleEquals = () => {
-    if (prevValue !== null && pendingOp) {
+    if (calcTokens.length > 0 && pendingOp && !freshOp) {
       const current = parseFloat(amount) || 0;
-      const result = calc(prevValue, current, pendingOp);
+      const result = evaluateExpression([...calcTokens, current]);
       const resultStr = fmtResult(result);
       setAmount(resultStr);
       flashAmount();
       // 清除运算状态，恢复菜单
+      setCalcTokens([]);
       setPrevValue(null);
       setPendingOp(null);
       setFreshOp(false);
@@ -367,14 +408,9 @@ export default function AddTransactionScreen() {
 
   /** 构建小字提示：显示完整运算过程 */
   const buildHint = (): string | null => {
-    if (prevValue === null || !pendingOp) return null;
-    const left = fmtResult(prevValue);
-    if (freshOp) {
-      // 刚按了运算符，还没输入新数字 → "35 +"
-      return `${left} ${pendingOp}`;
-    }
-    // 正在输入第二个数 → "35 + 10"
-    return `${left} ${pendingOp} ${amount || '0'}`;
+    if (calcTokens.length === 0) return null;
+    const tokens = freshOp ? calcTokens : [...calcTokens, amount || '0'];
+    return tokens.map((token) => typeof token === 'number' ? fmtResult(token) : token).join(' ');
   };
 
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -391,13 +427,7 @@ export default function AddTransactionScreen() {
   const handleSave = async () => {
     try {
       // 如果有未完成的运算，先算出结果
-      let finalAmount = amount;
-      if (prevValue !== null && pendingOp && !freshOp) {
-        const current = parseFloat(amount) || 0;
-        const result = calc(prevValue, current, pendingOp);
-        finalAmount = String(parseFloat(result.toFixed(10)));
-        setAmount(finalAmount);
-      }
+      const finalAmount = resolvePendingAmount();
 
       const num = parseFloat(finalAmount);
       if (!finalAmount || isNaN(num) || num <= 0) {
@@ -441,13 +471,7 @@ export default function AddTransactionScreen() {
   const handleBatchSave = async () => {
     try {
       // 如果有未完成的运算，先算出结果
-      let finalAmount = amount;
-      if (prevValue !== null && pendingOp && !freshOp) {
-        const current = parseFloat(amount) || 0;
-        const result = calc(prevValue, current, pendingOp);
-        finalAmount = String(parseFloat(result.toFixed(10)));
-        setAmount(finalAmount);
-      }
+      const finalAmount = resolvePendingAmount();
 
       const num = parseFloat(finalAmount);
       if (!finalAmount || isNaN(num) || num <= 0) {
@@ -475,6 +499,7 @@ export default function AddTransactionScreen() {
       // 清空金额和备注，保留类型、分类和日期
       setAmount('');
       setNote('');
+      setCalcTokens([]);
       setPrevValue(null);
       setPendingOp(null);
       setFreshOp(false);

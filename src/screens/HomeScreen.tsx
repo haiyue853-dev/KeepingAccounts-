@@ -1,17 +1,19 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
-  RefreshControl, SectionList, StatusBar, Modal,
+  RefreshControl, SectionList, StatusBar, Modal, TextInput, Alert, Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { TransactionRepo } from '../repositories/TransactionRepo';
+import { TransactionAdjustmentRepo } from '../repositories/TransactionAdjustmentRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
-import { Transaction } from '../models/Transaction';
+import { Transaction, TransactionAdjustmentType } from '../models/Transaction';
 import { COLORS, MASCOTS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
+import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 import { CategoryIcon } from '../components/AppIcon';
 import { showThemedConfirm } from '../components/AlertProvider';
 
@@ -20,12 +22,19 @@ interface DayGroup {
   dateLabel: string;
   weekday: string;
   totalExpense: number;
+  totalIncome: number;
   data: Transaction[];
 }
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 const MONTH_ITEM_HEIGHT = 42;
+const ADJUSTMENT_TYPES: { type: TransactionAdjustmentType; label: string }[] = [
+  { type: 'reimbursement', label: '报销' },
+  { type: 'cashback', label: '返现' },
+  { type: 'refund', label: '退款' },
+  { type: 'other', label: '其他' },
+];
 
 function getWeekday(d: string) { return WEEKDAYS[new Date(d).getDay()]; }
 
@@ -55,6 +64,14 @@ export default function HomeScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [showAction, setShowAction] = useState(false);
+  const [showAdjustment, setShowAdjustment] = useState(false);
+  const [adjustmentType, setAdjustmentType] = useState<TransactionAdjustmentType>('reimbursement');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
+  const [adjustmentDate, setAdjustmentDate] = useState('');
+  const [adjustmentNote, setAdjustmentNote] = useState('');
+  const [adjustmentError, setAdjustmentError] = useState('');
+  const [editingAdjustment, setEditingAdjustment] = useState(false);
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
   const [summaryHidden, setSummaryHidden] = useState(false);
   const monthListRef = useRef<ScrollView>(null);
   // 记住明细列表的滚动位置（编辑/删除后恢复）
@@ -128,7 +145,7 @@ export default function HomeScreen() {
           date,
           dateLabel: formatDateLabel(date),
           weekday: getWeekday(date),
-          totalExpense: items.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+          totalExpense: items.filter((t) => t.type === 'expense').reduce((s, t) => s + getTransactionNetAmount(t), 0),
           totalIncome: items.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
           data: items,
         };
@@ -198,6 +215,73 @@ export default function HomeScreen() {
     if (!selectedTx) return;
     setShowAction(false);
     navigation.navigate('AddTransaction', { transactionId: selectedTx.id, transactionType: selectedTx.type });
+  };
+
+  const handleOpenAdjustment = async () => {
+    const tx = selectedTx;
+    if (!tx || tx.type !== 'expense') return;
+
+    setAdjustmentType('reimbursement');
+    setAdjustmentAmount('');
+    setAdjustmentDate(tx.date);
+    setAdjustmentNote('');
+    setAdjustmentError('');
+    setEditingAdjustment(false);
+    setShowAction(false);
+
+    try {
+      const existing = await TransactionAdjustmentRepo.getByTransactionId(tx.id);
+      const current = existing[0];
+      if (current) {
+        setEditingAdjustment(true);
+        setAdjustmentType(current.type);
+        setAdjustmentAmount(String(current.amount));
+        setAdjustmentDate(current.date || tx.date);
+        setAdjustmentNote(current.note || '');
+      }
+    } catch (e) {
+      console.error('读取返现/报销失败', e);
+    }
+
+    setShowAdjustment(true);
+  };
+
+  const handleSaveAdjustment = async () => {
+    if (!selectedTx || savingAdjustment) return;
+    Keyboard.dismiss();
+
+    const amount = Number(adjustmentAmount.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setAdjustmentError('请输入大于 0 的返现/报销金额');
+      Alert.alert('金额不正确', '请输入大于 0 的返现/报销金额');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(adjustmentDate)) {
+      setAdjustmentError('日期请填写为 YYYY-MM-DD');
+      Alert.alert('日期格式不正确', '日期请填写为 YYYY-MM-DD');
+      return;
+    }
+
+    try {
+      setSavingAdjustment(true);
+      setAdjustmentError('');
+      await TransactionAdjustmentRepo.upsertForTransaction({
+        transaction_id: selectedTx.id,
+        type: adjustmentType,
+        amount,
+        date: adjustmentDate,
+        note: adjustmentNote.trim(),
+      });
+      setShowAdjustment(false);
+      setSelectedTx(null);
+      await loadData();
+    } catch (e) {
+      console.error('保存返现/报销失败', e);
+      setAdjustmentError('保存失败，请再试一次');
+      Alert.alert('保存失败', '返现/报销记录没有保存成功，请再试一次');
+    } finally {
+      setSavingAdjustment(false);
+    }
   };
 
   const handleDelete = () => {
@@ -325,36 +409,47 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-        renderItem={({ item, index, section }) => (
-          <TouchableOpacity
-            style={[
-              styles.txItem,
-              index === 0 && styles.txItemFirst,
-              index === section.data.length - 1 && styles.txItemLast,
-            ]}
-            onPress={() => navigation.navigate('AddTransaction', { transactionId: item.id, transactionType: item.type })}
-            onLongPress={() => handleLongPress(item)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.txIconBg}>
-              <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color="#555" />
-            </View>
-            <View style={styles.txInfo}>
-              <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
-              {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
-            </View>
-            <View style={styles.txRight}>
-              <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
-                {item.type === 'income' ? '+' : '-'}{formatAmount(item.amount)}
-              </Text>
-              {item.created_at && (
-                <Text style={styles.txTime}>
-                  {new Date(item.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+        renderItem={({ item, index, section }) => {
+          const adjusted = hasAdjustment(item);
+          const displayAmount = adjusted ? getTransactionNetAmount(item) : item.amount;
+          const adjustmentTotal = getAdjustmentTotal(item);
+          const adjustmentNote = item.adjustment_note?.trim();
+          return (
+            <TouchableOpacity
+              style={[
+                styles.txItem,
+                index === 0 && styles.txItemFirst,
+                index === section.data.length - 1 && styles.txItemLast,
+              ]}
+              onPress={() => navigation.navigate('AddTransaction', { transactionId: item.id, transactionType: item.type })}
+              onLongPress={() => handleLongPress(item)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.txIconBg}>
+                <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color="#555" />
+              </View>
+              <View style={styles.txInfo}>
+                <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
+                {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
+              </View>
+              <View style={styles.txRight}>
+                <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
+                  {item.type === 'income' ? '+' : '-'}{formatAmount(displayAmount)}
                 </Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        )}
+                {adjusted ? (
+                  <Text style={styles.txAdjustment} numberOfLines={1}>
+                    原 ¥{formatAmount(item.amount)} · {getAdjustmentLabel(item)} ¥{formatAmount(adjustmentTotal)}
+                    {adjustmentNote ? ` · ${adjustmentNote}` : ''}
+                  </Text>
+                ) : item.created_at ? (
+                  <Text style={styles.txTime}>
+                    {new Date(item.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </Text>
+                ) : null}
+              </View>
+            </TouchableOpacity>
+          );
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
@@ -394,6 +489,16 @@ export default function HomeScreen() {
               <Text style={styles.actionBtnText}>编辑</Text>
             </TouchableOpacity>
 
+            {selectedTx?.type === 'expense' && (
+              <>
+                <View style={styles.actionDivider} />
+                <TouchableOpacity style={styles.actionBtn} onPress={handleOpenAdjustment}>
+                  <Ionicons name="cash-outline" size={20} color={COLORS.primaryDark} />
+                  <Text style={styles.actionBtnText}>返现/报销</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
             <View style={styles.actionDivider} />
 
             <TouchableOpacity style={styles.actionBtn} onPress={handleDelete}>
@@ -408,6 +513,90 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      <Modal visible={showAdjustment} transparent animationType="fade" onRequestClose={() => setShowAdjustment(false)}>
+        <View style={styles.adjustmentOverlay}>
+          <View style={styles.adjustmentSheet}>
+            <Text style={styles.adjustmentTitle}>{editingAdjustment ? '修改返现/报销' : '添加返现/报销'}</Text>
+            {selectedTx && (
+              <Text style={styles.adjustmentSubtitle} numberOfLines={1}>
+                {selectedTx.category_name || '未分类'} · 原支出 ¥{formatAmount(selectedTx.amount)}
+              </Text>
+            )}
+
+            <View style={styles.adjustmentTypeRow}>
+              {ADJUSTMENT_TYPES.map((item) => (
+                <TouchableOpacity
+                  key={item.type}
+                  style={[styles.adjustmentTypeBtn, adjustmentType === item.type && styles.adjustmentTypeBtnActive]}
+                  onPress={() => setAdjustmentType(item.type)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.adjustmentTypeText, adjustmentType === item.type && styles.adjustmentTypeTextActive]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              value={adjustmentAmount}
+              onChangeText={(value) => {
+                setAdjustmentAmount(value);
+                if (adjustmentError) setAdjustmentError('');
+              }}
+              placeholder="金额，例如 5"
+              placeholderTextColor={COLORS.textLight}
+              keyboardType="decimal-pad"
+              style={styles.adjustmentInput}
+            />
+            <TextInput
+              value={adjustmentDate}
+              onChangeText={(value) => {
+                setAdjustmentDate(value);
+                if (adjustmentError) setAdjustmentError('');
+              }}
+              placeholder="关联日期 YYYY-MM-DD"
+              placeholderTextColor={COLORS.textLight}
+              style={styles.adjustmentInput}
+            />
+            <TextInput
+              value={adjustmentNote}
+              onChangeText={(value) => {
+                setAdjustmentNote(value);
+                if (adjustmentError) setAdjustmentError('');
+              }}
+              placeholder="备注，例如好评红包"
+              placeholderTextColor={COLORS.textLight}
+              style={[styles.adjustmentInput, styles.adjustmentNoteInput]}
+              multiline
+              blurOnSubmit
+              returnKeyType="done"
+              onSubmitEditing={handleSaveAdjustment}
+            />
+
+            {adjustmentError ? <Text style={styles.adjustmentError}>{adjustmentError}</Text> : null}
+
+            <View style={styles.adjustmentActions}>
+              <TouchableOpacity
+                style={[styles.adjustmentActionBtn, styles.adjustmentCancelBtn]}
+                onPress={() => setShowAdjustment(false)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.adjustmentCancelText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.adjustmentActionBtn, styles.adjustmentSaveBtn, savingAdjustment && styles.adjustmentSaveBtnDisabled]}
+                onPress={handleSaveAdjustment}
+                activeOpacity={0.75}
+                disabled={savingAdjustment}
+              >
+                <Text style={styles.adjustmentSaveText}>{savingAdjustment ? '保存中...' : '保存'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* 月份下拉选择器 */}
@@ -553,9 +742,10 @@ const styles = StyleSheet.create({
   txInfo: { flex: 1 },
   txName: { fontSize: 14, color: COLORS.text, fontWeight: '500' },
   txNote: { fontSize: 11, color: COLORS.textLight },
-  txRight: { alignItems: 'flex-end' },
+  txRight: { alignItems: 'flex-end', maxWidth: '48%' },
   txAmount: { fontSize: 14, fontWeight: '600' },
   txTime: { fontSize: 10, color: COLORS.textLight },
+  txAdjustment: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2, fontWeight: '700' },
   income: { color: COLORS.income },
   expense: { color: COLORS.expense },
 
@@ -611,6 +801,111 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF4D3',
   },
   actionCancelText: { fontSize: 15, color: COLORS.text, fontWeight: '600', textAlign: 'center' },
+
+  adjustmentOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  adjustmentSheet: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 18,
+  },
+  adjustmentTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  adjustmentSubtitle: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  adjustmentTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  adjustmentTypeBtn: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  adjustmentTypeBtnActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: 'transparent',
+  },
+  adjustmentTypeText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
+  },
+  adjustmentTypeTextActive: {
+    color: COLORS.text,
+  },
+  adjustmentInput: {
+    minHeight: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    backgroundColor: COLORS.cardBg,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  adjustmentNoteInput: {
+    minHeight: 68,
+    paddingTop: 10,
+    textAlignVertical: 'top',
+  },
+  adjustmentError: {
+    fontSize: 12,
+    color: COLORS.expense,
+    marginTop: -2,
+    marginBottom: 10,
+  },
+  adjustmentActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  adjustmentActionBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adjustmentCancelBtn: {
+    backgroundColor: COLORS.background,
+  },
+  adjustmentSaveBtn: {
+    backgroundColor: COLORS.primary,
+  },
+  adjustmentSaveBtnDisabled: {
+    opacity: 0.6,
+  },
+  adjustmentCancelText: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
+  },
+  adjustmentSaveText: {
+    fontSize: 15,
+    color: COLORS.text,
+    fontWeight: '800',
+  },
 
   // 月份下拉选择器
   monthOverlay: {

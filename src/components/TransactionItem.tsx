@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Transaction } from '../models/Transaction';
 import { COLORS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
+import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 
 interface Props {
   transaction: Transaction;
@@ -12,6 +13,10 @@ interface Props {
 
 export default function TransactionItem({ transaction: t, onPress, onLongPress }: Props) {
   const isIncome = t.type === 'income';
+  const adjusted = hasAdjustment(t);
+  const displayAmount = adjusted ? getTransactionNetAmount(t) : t.amount;
+  const adjustmentTotal = getAdjustmentTotal(t);
+  const adjustmentNote = t.adjustment_note?.trim();
   return (
     <TouchableOpacity
       style={styles.container}
@@ -28,9 +33,13 @@ export default function TransactionItem({ transaction: t, onPress, onLongPress }
       </View>
       <View style={styles.right}>
         <Text style={[styles.amount, { color: isIncome ? COLORS.income : COLORS.expense }]}>
-          {isIncome ? '+' : '-'}{formatAmount(t.amount)}
+          {isIncome ? '+' : '-'}{formatAmount(displayAmount)}
         </Text>
-        <Text style={styles.date}>{t.date}</Text>
+        <Text style={[styles.date, adjusted && styles.adjustmentText]} numberOfLines={1}>
+          {adjusted
+            ? `原 ¥${formatAmount(t.amount)} · ${getAdjustmentLabel(t)} ¥${formatAmount(adjustmentTotal)}${adjustmentNote ? ` · ${adjustmentNote}` : ''}`
+            : t.date}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -59,7 +68,8 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   categoryName: { fontSize: 16, color: COLORS.text, fontWeight: '500' },
   note: { fontSize: 13, color: COLORS.textLight, marginTop: 2 },
-  right: { alignItems: 'flex-end' },
+  right: { alignItems: 'flex-end', maxWidth: '48%' },
   amount: { fontSize: 16, fontWeight: '600' },
   date: { fontSize: 12, color: COLORS.textLight, marginTop: 2 },
+  adjustmentText: { color: COLORS.textSecondary, fontWeight: '700' },
 });

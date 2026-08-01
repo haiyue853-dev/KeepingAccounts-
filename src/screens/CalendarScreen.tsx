@@ -12,6 +12,7 @@ import { Transaction } from '../models/Transaction';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
+import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_PADDING = 16;
@@ -167,7 +168,7 @@ export default function CalendarScreen() {
     });
 
     const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + getTransactionNetAmount(t), 0);
 
     setSelectedDaySummary({ income, expense });
     setSelectedDayTransactions(txs);
@@ -295,27 +296,41 @@ export default function CalendarScreen() {
             </View>
 
             {selectedDayTransactions.length > 0 ? (
-              selectedDayTransactions.map((item, index) => (
-                <View
-                  key={String(item.id)}
-                  style={[
-                    styles.transactionItem,
-                    index === 0 && styles.txItemFirst,
-                    index === selectedDayTransactions.length - 1 && styles.txItemLast,
-                  ]}
-                >
-                  <View style={styles.txIconBg}>
-                    <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color="#555" />
+              selectedDayTransactions.map((item, index) => {
+                const adjusted = hasAdjustment(item);
+                const displayAmount = adjusted ? getTransactionNetAmount(item) : item.amount;
+                const adjustmentTotal = getAdjustmentTotal(item);
+                const adjustmentNote = item.adjustment_note?.trim();
+                return (
+                  <View
+                    key={String(item.id)}
+                    style={[
+                      styles.transactionItem,
+                      index === 0 && styles.txItemFirst,
+                      index === selectedDayTransactions.length - 1 && styles.txItemLast,
+                    ]}
+                  >
+                    <View style={styles.txIconBg}>
+                      <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color="#555" />
+                    </View>
+                    <View style={styles.txInfo}>
+                      <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
+                      {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
+                    </View>
+                    <View style={styles.txRight}>
+                      <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
+                        {item.type === 'income' ? '+' : '-'}{formatAmount(displayAmount)}
+                      </Text>
+                      {adjusted ? (
+                        <Text style={styles.txAdjustment} numberOfLines={1}>
+                          原 ¥{formatAmount(item.amount)} · {getAdjustmentLabel(item)} ¥{formatAmount(adjustmentTotal)}
+                          {adjustmentNote ? ` · ${adjustmentNote}` : ''}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
-                  <View style={styles.txInfo}>
-                    <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
-                    {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
-                  </View>
-                  <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
-                    {item.type === 'income' ? '+' : '-'}{formatAmount(item.amount)}
-                  </Text>
-                </View>
-              ))
+                );
+              })
             ) : (
               <View style={styles.empty}>
                 <Ionicons name="document-text-outline" size={44} color={COLORS.textLight} />
@@ -476,7 +491,9 @@ const styles = StyleSheet.create({
   txInfo: { flex: 1 },
   txName: { fontSize: 14, color: COLORS.text, fontWeight: '500' },
   txNote: { fontSize: 11, color: COLORS.textLight },
+  txRight: { alignItems: 'flex-end', maxWidth: '45%' },
   txAmount: { fontSize: 14, fontWeight: '600' },
+  txAdjustment: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2, fontWeight: '700' },
   income: { color: COLORS.income },
   expense: { color: COLORS.expense },
   empty: { alignItems: 'center', paddingVertical: 70, gap: 8 },

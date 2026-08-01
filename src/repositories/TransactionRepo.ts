@@ -1,13 +1,55 @@
 import { getDatabase } from '../db/database';
 import { Transaction, TransactionCreate, TransactionFilter } from '../models/Transaction';
 
+const adjustmentJoin = `
+  LEFT JOIN (
+    SELECT
+      cr.transaction_id,
+      SUM(cr.amount) as total,
+      (
+        SELECT latest.type
+        FROM cashback_records latest
+        WHERE latest.transaction_id = cr.transaction_id
+        ORDER BY latest.date DESC, latest.created_at DESC, latest.id DESC
+        LIMIT 1
+      ) as latest_type,
+      (
+        SELECT latest.note
+        FROM cashback_records latest
+        WHERE latest.transaction_id = cr.transaction_id
+        ORDER BY latest.date DESC, latest.created_at DESC, latest.id DESC
+        LIMIT 1
+      ) as latest_note
+    FROM cashback_records cr
+    GROUP BY cr.transaction_id
+  ) adj ON adj.transaction_id = t.id
+`;
+
+const netExpenseSql = `
+  CASE
+    WHEN t.amount - COALESCE(adj.total, 0) > 0 THEN t.amount - COALESCE(adj.total, 0)
+    ELSE 0
+  END
+`;
+
+const transactionSelectSql = `
+  t.*,
+  c.name as category_name,
+  c.icon as category_icon,
+  COALESCE(adj.total, 0) as adjustment_total,
+  adj.latest_type as adjustment_type,
+  adj.latest_note as adjustment_note,
+  CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE t.amount END as net_amount
+`;
+
 export class TransactionRepo {
   static async getAll(filter: TransactionFilter = {}): Promise<Transaction[]> {
     const db = await getDatabase();
     let sql = `
-      SELECT t.*, c.name as category_name, c.icon as category_icon
+      SELECT ${transactionSelectSql}
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id
+      ${adjustmentJoin}
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -40,9 +82,10 @@ export class TransactionRepo {
   static async getById(id: number): Promise<Transaction | null> {
     const db = await getDatabase();
     return db.getFirstAsync<Transaction>(
-      `SELECT t.*, c.name as category_name, c.icon as category_icon
+      `SELECT ${transactionSelectSql}
        FROM transactions t
        LEFT JOIN categories c ON t.category_id = c.id
+       ${adjustmentJoin}
        WHERE t.id = ?`,
       [id]
     );
@@ -73,6 +116,7 @@ export class TransactionRepo {
 
   static async delete(id: number): Promise<void> {
     const db = await getDatabase();
+    await db.runAsync('DELETE FROM cashback_records WHERE transaction_id = ?', [id]);
     await db.runAsync('DELETE FROM transactions WHERE id = ?', [id]);
   }
 
@@ -84,10 +128,11 @@ export class TransactionRepo {
 
     const result = await db.getFirstAsync<{ income: number; expense: number }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
-       FROM transactions
-       WHERE book_id = ? AND date >= ? AND date <= ?`,
+        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
+       FROM transactions t
+       ${adjustmentJoin}
+       WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?`,
       [bookId, startDate, endDate]
     );
     return result ?? { income: 0, expense: 0 };
@@ -100,10 +145,12 @@ export class TransactionRepo {
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
     return db.getAllAsync(
-      `SELECT t.category_id as category_id, c.name as category_name, c.icon as category_icon, t.type, SUM(t.amount) as total,
+      `SELECT t.category_id as category_id, c.name as category_name, c.icon as category_icon, t.type,
+              SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE t.amount END) as total,
               COUNT(*) as count, MIN(t.date) as first_date, MAX(t.date) as last_date
        FROM transactions t
        LEFT JOIN categories c ON t.category_id = c.id
+       ${adjustmentJoin}
        WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?
        GROUP BY t.category_id, t.type
        ORDER BY total DESC`,
@@ -117,13 +164,14 @@ export class TransactionRepo {
   static async getDailySummary(bookId: number, startDate: string, endDate: string): Promise<{ date: string; income: number; expense: number }[]> {
     const db = await getDatabase();
     return db.getAllAsync(
-      `SELECT date,
-        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
-       FROM transactions
-       WHERE book_id = ? AND date >= ? AND date <= ?
-       GROUP BY date
-       ORDER BY date`,
+      `SELECT t.date as date,
+        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
+       FROM transactions t
+       ${adjustmentJoin}
+       WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?
+       GROUP BY t.date
+       ORDER BY t.date`,
       [bookId, startDate, endDate]
     );
   }
@@ -135,10 +183,11 @@ export class TransactionRepo {
     const db = await getDatabase();
     const result = await db.getFirstAsync<{ income: number; expense: number }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
-       FROM transactions
-       WHERE book_id = ? AND date >= ? AND date <= ?`,
+        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
+       FROM transactions t
+       ${adjustmentJoin}
+       WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?`,
       [bookId, startDate, endDate]
     );
     return result ?? { income: 0, expense: 0 };
@@ -150,10 +199,12 @@ export class TransactionRepo {
   static async getCategorySummaryByRange(bookId: number, startDate: string, endDate: string): Promise<{ category_id: number; category_name: string; category_icon: string; type: string; total: number }[]> {
     const db = await getDatabase();
     return db.getAllAsync(
-      `SELECT t.category_id as category_id, c.name as category_name, c.icon as category_icon, t.type, SUM(t.amount) as total,
+      `SELECT t.category_id as category_id, c.name as category_name, c.icon as category_icon, t.type,
+              SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE t.amount END) as total,
               COUNT(*) as count, MIN(t.date) as first_date, MAX(t.date) as last_date
        FROM transactions t
        LEFT JOIN categories c ON t.category_id = c.id
+       ${adjustmentJoin}
        WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?
        GROUP BY t.category_id, t.type
        ORDER BY total DESC`,
@@ -197,11 +248,12 @@ export class TransactionRepo {
   static async getByCategoryAndDateRange(bookId: number, categoryId: number, startDate: string, endDate: string): Promise<Transaction[]> {
     const db = await getDatabase();
     return db.getAllAsync<Transaction>(
-      `SELECT t.*, c.name as category_name, c.icon as category_icon
+      `SELECT ${transactionSelectSql}
        FROM transactions t
        LEFT JOIN categories c ON t.category_id = c.id
+       ${adjustmentJoin}
        WHERE t.book_id = ? AND t.category_id = ? AND t.date >= ? AND t.date <= ?
-       ORDER BY t.amount DESC`,
+       ORDER BY net_amount DESC`,
       [bookId, categoryId, startDate, endDate]
     );
   }

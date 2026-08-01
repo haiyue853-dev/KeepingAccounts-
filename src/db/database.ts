@@ -74,6 +74,9 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
     'CREATE INDEX IF NOT EXISTS idx_transactions_book_id ON transactions(book_id)',
     'CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)',
     'CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)',
+    `CREATE TABLE IF NOT EXISTS cashback_records (
+      id INTEGER PRIMARY KEY
+    )`,
     `CREATE TABLE IF NOT EXISTS budgets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       book_id INTEGER NOT NULL,
@@ -109,6 +112,8 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
     await database.runAsync(sql);
   }
 
+  await ensureCashbackRecordsSchema(database);
+
   // Insert default data if empty
   const bookCount = await database.getFirstAsync<{ count: number }>(
     'SELECT COUNT(*) as count FROM account_books'
@@ -116,6 +121,28 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
   if (bookCount && bookCount.count === 0) {
     await insertDefaultData(database);
   }
+}
+
+async function ensureCashbackRecordsSchema(database: SQLite.SQLiteDatabase): Promise<void> {
+  const columns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(cashback_records)');
+  const existing = new Set(columns.map((column) => column.name));
+  const migrations = [
+    { name: 'transaction_id', sql: 'ALTER TABLE cashback_records ADD COLUMN transaction_id INTEGER NOT NULL DEFAULT 0' },
+    { name: 'type', sql: "ALTER TABLE cashback_records ADD COLUMN type TEXT NOT NULL DEFAULT 'other'" },
+    { name: 'amount', sql: 'ALTER TABLE cashback_records ADD COLUMN amount REAL NOT NULL DEFAULT 0' },
+    { name: 'date', sql: "ALTER TABLE cashback_records ADD COLUMN date TEXT NOT NULL DEFAULT ''" },
+    { name: 'note', sql: 'ALTER TABLE cashback_records ADD COLUMN note TEXT' },
+    { name: 'created_at', sql: 'ALTER TABLE cashback_records ADD COLUMN created_at TEXT' },
+    { name: 'updated_at', sql: 'ALTER TABLE cashback_records ADD COLUMN updated_at TEXT' },
+  ];
+
+  for (const migration of migrations) {
+    if (!existing.has(migration.name)) {
+      await database.runAsync(migration.sql);
+    }
+  }
+
+  await database.runAsync('CREATE INDEX IF NOT EXISTS idx_cashback_records_transaction_id ON cashback_records(transaction_id)');
 }
 
 async function insertDefaultData(database: SQLite.SQLiteDatabase): Promise<void> {

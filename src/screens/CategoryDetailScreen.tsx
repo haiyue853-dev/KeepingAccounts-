@@ -12,6 +12,7 @@ import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { TransactionRepo } from '../repositories/TransactionRepo';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
+import { getTransactionNetAmount } from '../utils/transactionAmounts';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryIcon } from '../components/AppIcon';
 
@@ -25,7 +26,7 @@ interface NoteRankItem {
 export default function CategoryDetailScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const route = useRoute();
+  const route = useRoute<any>();
 
   const categoryData = route.params?.categoryData as {
     id: number;
@@ -62,9 +63,9 @@ export default function CategoryDetailScreen() {
         if (!noteGroups[note]) {
           noteGroups[note] = { total: 0, count: 0 };
         }
-        noteGroups[note].total += t.amount;
+        noteGroups[note].total += getTransactionNetAmount(t);
         noteGroups[note].count += 1;
-        categoryTotal += t.amount;
+        categoryTotal += getTransactionNetAmount(t);
       });
 
       // 转换为数组并排序
