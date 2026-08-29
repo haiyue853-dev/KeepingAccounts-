@@ -7,7 +7,6 @@ import {
   ScrollView,
   RefreshControl,
   TextInput,
-  Modal,
   ActivityIndicator,
   Image,
 } from 'react-native';
@@ -19,7 +18,7 @@ import { COLORS, SHADOWS, MASCOTS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { SettingsRepo } from '../repositories/SettingsRepo';
 import { TransactionRepo } from '../repositories/TransactionRepo';
-import { showThemedAlert, showThemedConfirm } from '../components/AlertProvider';
+import { showThemedAlert } from '../components/AlertProvider';
 
 export default function AssetScreen() {
   const navigation = useNavigation<any>();
@@ -32,7 +31,7 @@ export default function AssetScreen() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<boolean>(false);
 
-  const [modalVisible, setModalVisible] = useState<boolean>(false);
+  const [editing, setEditing] = useState<boolean>(false);
   const [inputValue, setInputValue] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
 
@@ -70,12 +69,17 @@ export default function AssetScreen() {
   const hasInitial = initialBalance !== null;
   const isEmpty = !hasInitial && income === 0 && expense === 0;
 
-  const openSetModal = () => {
+  const startEdit = () => {
     setInputValue(hasInitial ? initialBalance!.toFixed(2) : '');
-    setModalVisible(true);
+    setEditing(true);
   };
 
-  const handleSave = async () => {
+  const cancelEdit = () => {
+    setEditing(false);
+    setInputValue('');
+  };
+
+  const saveEdit = async () => {
     const trimmed = inputValue.trim();
     if (trimmed === '' || trimmed === '-' || trimmed === '.') {
       showThemedAlert('提示', '请输入有效的金额');
@@ -89,7 +93,8 @@ export default function AssetScreen() {
     try {
       setSaving(true);
       await SettingsRepo.setInitialBalance(num);
-      setModalVisible(false);
+      setEditing(false);
+      setInputValue('');
       load();
     } catch (e) {
       console.error('保存起始余额失败:', e);
@@ -97,15 +102,6 @@ export default function AssetScreen() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleReset = () => {
-    if (!hasInitial) return;
-    showThemedConfirm(
-      '重设起始余额',
-      '重设后，剩余金额将从新的起始值开始计算。确定继续吗？',
-      openSetModal
-    );
   };
 
   return (
@@ -121,7 +117,6 @@ export default function AssetScreen() {
           />
         }
       >
-        {/* Header */}
         <View style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
           <View style={styles.headerRow}>
             <TouchableOpacity
@@ -148,12 +143,11 @@ export default function AssetScreen() {
               <Text style={styles.balanceText}>¥{formatAmount(remaining)}</Text>
             )}
             {!loading && !loadError && !hasInitial && (
-              <Text style={styles.hintText}>点击下方按钮设置你的起始余额</Text>
+              <Text style={styles.hintText}>在下方输入你的起始余额</Text>
             )}
           </View>
         </View>
 
-        {/* 公式卡片 */}
         <View style={styles.formulaCard}>
           {loading ? (
             <ActivityIndicator size="small" color={COLORS.textSecondary} />
@@ -164,7 +158,7 @@ export default function AssetScreen() {
               <FormulaItem label="起始" value={initialBalance} color={COLORS.text} />
               <FormulaSign op="+" />
               <FormulaItem label="收入" value={income} color={COLORS.income} />
-              <FormulaSign op="−" />
+              <FormulaSign op="-" />
               <FormulaItem label="支出" value={expense} color={COLORS.danger} />
               <FormulaSign op="=" />
               <FormulaItem
@@ -177,99 +171,91 @@ export default function AssetScreen() {
           )}
         </View>
 
-        {/* 按钮区 */}
-        <View style={styles.actionWrap}>
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            activeOpacity={0.85}
-            onPress={hasInitial ? handleReset : openSetModal}
-            disabled={loading}
-          >
-            <Ionicons
-              name={hasInitial ? 'refresh-outline' : 'add-circle-outline'}
-              size={18}
-              color={COLORS.text}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.primaryBtnText}>
-              {hasInitial ? '重设起始余额' : '设置起始金额'}
-            </Text>
-          </TouchableOpacity>
-          {isEmpty && !loading && (
-            <Text style={styles.emptyHint}>
-              你还没有任何交易记录，去记一笔吧～
-            </Text>
+        <View style={styles.editCard}>
+          <Text style={styles.editLabel}>起始余额</Text>
+          {editing ? (
+            <View>
+              <View style={styles.inputRow}>
+                <Text style={styles.currencyMark}>¥</Text>
+                <TextInput
+                  style={styles.input}
+                  value={inputValue}
+                  onChangeText={(t) => {
+                    let s = t.replace(/[^\d.-]/g, '');
+                    const firstMinus = s.indexOf('-');
+                    if (firstMinus > 0) s = s.replace(/-/g, '');
+                    if (firstMinus === 0) s = '-' + s.substring(1).replace(/-/g, '');
+                    const firstDot = s.indexOf('.');
+                    if (firstDot >= 0) {
+                      s = s.substring(0, firstDot + 1) + s.substring(firstDot + 1).replace(/\./g, '');
+                    }
+                    setInputValue(s);
+                  }}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  placeholderTextColor={COLORS.textLight}
+                  editable={!saving}
+                  autoFocus
+                />
+              </View>
+              <View style={styles.editBtns}>
+                <TouchableOpacity
+                  style={[styles.editBtn, styles.editBtnCancel]}
+                  activeOpacity={0.8}
+                  onPress={cancelEdit}
+                  disabled={saving}
+                >
+                  <Text style={styles.editBtnCancelText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editBtn, styles.editBtnConfirm]}
+                  activeOpacity={0.8}
+                  onPress={saveEdit}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={COLORS.text} />
+                  ) : (
+                    <Text style={styles.editBtnConfirmText}>保存</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.viewRow}>
+              <Text style={styles.viewValue}>
+                {hasInitial ? `¥${formatAmount(initialBalance!)}` : '尚未设置'}
+              </Text>
+              <TouchableOpacity
+                style={styles.editLinkBtn}
+                activeOpacity={0.7}
+                onPress={startEdit}
+                disabled={loading}
+              >
+                <Ionicons
+                  name={hasInitial ? 'create-outline' : 'add-circle-outline'}
+                  size={16}
+                  color={COLORS.primaryDark}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.editLinkText}>
+                  {hasInitial ? '修改' : '设置'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
+
+        {isEmpty && !loading && (
+          <Text style={styles.emptyHint}>
+            你还没有任何交易记录，去记一笔吧～
+          </Text>
+        )}
 
         <Text style={styles.disclaimer}>
           起始余额是手动设置的参考值；之后的每一笔收入会增加、支出会减少剩余金额。
         </Text>
       </ScrollView>
-
-      {/* 设置/重设 起始余额 Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => !saving && setModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {hasInitial ? '重设起始余额' : '设置起始余额'}
-            </Text>
-            <Text style={styles.modalSubtitle}>
-              请输入你当前的现金总额（可正可负）
-            </Text>
-            <View style={styles.inputRow}>
-              <Text style={styles.currencyMark}>¥</Text>
-              <TextInput
-                style={styles.input}
-                value={inputValue}
-                onChangeText={(t) => {
-                  let s = t.replace(/[^\d.-]/g, '');
-                  const firstMinus = s.indexOf('-');
-                  if (firstMinus > 0) s = s.replace(/-/g, '');
-                  if (firstMinus === 0) s = '-' + s.substring(1).replace(/-/g, '');
-                  const firstDot = s.indexOf('.');
-                  if (firstDot >= 0) {
-                    s = s.substring(0, firstDot + 1) + s.substring(firstDot + 1).replace(/\./g, '');
-                  }
-                  setInputValue(s);
-                }}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor={COLORS.textLight}
-                editable={!saving}
-                autoFocus
-              />
-            </View>
-            <View style={styles.modalBtns}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnCancel]}
-                activeOpacity={0.8}
-                onPress={() => setModalVisible(false)}
-                disabled={saving}
-              >
-                <Text style={styles.modalBtnCancelText}>取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnConfirm]}
-                activeOpacity={0.8}
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color={COLORS.text} />
-                ) : (
-                  <Text style={styles.modalBtnConfirmText}>保存</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -385,25 +371,75 @@ const styles = StyleSheet.create({
 
   cardErrorText: { color: COLORS.danger, textAlign: 'center', fontSize: 12 },
 
-  actionWrap: {
+  editCard: {
     marginHorizontal: 16,
-    marginTop: 18,
-    alignItems: 'center',
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: 14,
     backgroundColor: COLORS.surface,
     borderRadius: 18,
-    paddingHorizontal: 28,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     ...SHADOWS.card,
   },
-  primaryBtnText: { color: COLORS.text, fontSize: 15, fontWeight: '800' },
+  editLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  viewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  viewValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  editLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: COLORS.primaryLight,
+  },
+  editLinkText: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  currencyMark: { fontSize: 20, fontWeight: '900', color: COLORS.text, marginRight: 6 },
+  input: { flex: 1, fontSize: 22, fontWeight: '800', color: COLORS.text, paddingVertical: 12 },
+  editBtns: { flexDirection: 'row', justifyContent: 'flex-end' },
+  editBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 10,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editBtnCancel: { backgroundColor: COLORS.background },
+  editBtnCancelText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '700' },
+  editBtnConfirm: { backgroundColor: COLORS.primary },
+  editBtnConfirmText: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
+
   emptyHint: {
     fontSize: 12,
     color: COLORS.textLight,
-    marginTop: 12,
+    marginTop: 16,
+    textAlign: 'center',
     fontWeight: '600',
   },
 
@@ -415,46 +451,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     lineHeight: 16,
   },
-
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(58, 46, 31, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-  },
-  modalCard: {
-    width: '100%',
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    padding: 20,
-    ...SHADOWS.floating,
-  },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  modalSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 14, fontWeight: '600' },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    marginBottom: 18,
-  },
-  currencyMark: { fontSize: 20, fontWeight: '900', color: COLORS.text, marginRight: 6 },
-  input: { flex: 1, fontSize: 22, fontWeight: '800', color: COLORS.text, paddingVertical: 12 },
-  modalBtns: { flexDirection: 'row', justifyContent: 'flex-end' },
-  modalBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginLeft: 10,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalBtnCancel: { backgroundColor: COLORS.background },
-  modalBtnCancelText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '700' },
-  modalBtnConfirm: { backgroundColor: COLORS.primary },
-  modalBtnConfirmText: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
 });
