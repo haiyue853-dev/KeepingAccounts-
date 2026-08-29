@@ -419,7 +419,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   currencyMark: { fontSize: 20, fontWeight: '900', color: COLORS.text, marginRight: 6 },
-  input: { flex: 1, fontSize: 22, fontWeight: '800', color: COLORS.text, paddingVertical: 12 },
+  input: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.text,
+    paddingVertical: 12,
+    // 去掉 web 上点击时的橙色 focus 边框
+    outlineWidth: 0,
+    outlineStyle: 'none',
+  },
   editBtns: { flexDirection: 'row', justifyContent: 'flex-end' },
   editBtn: {
     paddingHorizontal: 18,
