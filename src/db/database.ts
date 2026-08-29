@@ -106,6 +106,11 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
       UNIQUE(book_id, category_id, year, month)
     )`,
+    `CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )`,
   ];
 
   for (const sql of statements) {

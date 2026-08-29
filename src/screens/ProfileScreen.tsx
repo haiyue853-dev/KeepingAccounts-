@@ -10,7 +10,7 @@ const APP_VERSION = '1.2.8';
 const MENU_ITEMS = [
   { icon: 'pricetag-outline' as const, label: '分类管理', screen: 'Category' },
   { icon: 'wallet-outline' as const, label: '预算管理', screen: 'Budget' },
-  { icon: 'briefcase-outline' as const, label: '资产管理', screen: null },
+  { icon: 'briefcase-outline' as const, label: '资产管理', screen: 'Asset' },
   { icon: 'swap-horizontal-outline' as const, label: '导入导出', screen: 'ImportExport' },
   { icon: 'cloud-upload-outline' as const, label: '数据备份', screen: null },
   { icon: 'settings-outline' as const, label: '设置', screen: 'Settings' },

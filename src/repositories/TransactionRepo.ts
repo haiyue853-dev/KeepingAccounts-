@@ -213,6 +213,22 @@ export class TransactionRepo {
   }
 
   /**
+   * 获取全 App 范围的收支总额（不按账本过滤）
+   * 用于「资产管理」页计算剩余余额
+   */
+  static async getGlobalTotals(): Promise<{ income: number; expense: number }> {
+    const db = await getDatabase();
+    const result = await db.getFirstAsync<{ income: number; expense: number }>(
+      `SELECT
+        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
+       FROM transactions t
+       ${adjustmentJoin}`
+    );
+    return result ?? { income: 0, expense: 0 };
+  }
+
+  /**
    * 获取最常用的备注（去重，按使用次数降序）
    * @param categoryId 分类ID，如果传入则只获取该分类下的备注
    * @param limit 返回数量限制

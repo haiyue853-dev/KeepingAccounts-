@@ -23,6 +23,7 @@ import BudgetScreen from '../screens/BudgetScreen';
 import BillStatisticsScreen from '../screens/BillStatisticsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
+import AssetScreen from '../screens/AssetScreen';
 import { COLORS } from '../utils/constants';
 
 const Tab = createBottomTabNavigator();
@@ -159,6 +160,11 @@ export default function AppNavigator() {
         name="CategoryDetail"
         component={CategoryDetailScreen}
         options={{ title: '分类详情', headerTitleStyle: { fontWeight: '600', fontSize: 16 } }}
+      />
+      <Stack.Screen
+        name="Asset"
+        component={AssetScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
