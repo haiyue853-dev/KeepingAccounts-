@@ -2,7 +2,7 @@
   "expo": {
     "name": "哈基咪记账",
     "slug": "bookkeeping-app",
-    "version": "1.2.8",
+    "version": "1.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.bookkeeping.app",
-      "versionCode": 128
+      "versionCode": 130
     },
     "web": {
       "favicon": "./assets/favicon.png"

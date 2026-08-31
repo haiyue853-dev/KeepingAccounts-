@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, MASCOTS, SHADOWS } from '../utils/constants';
 
-const APP_VERSION = '1.2.8';
+const APP_VERSION = '1.3.0';
 
 const MENU_ITEMS = [
   { icon: 'pricetag-outline' as const, label: '分类管理', screen: 'Category' },
