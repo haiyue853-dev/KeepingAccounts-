@@ -32,6 +32,51 @@ const netExpenseSql = `
   END
 `;
 
+// 报销/返现/退款等抵扣超过原支出的部分——钱实际多回来了，视作收入
+const overageIncomeSql = `
+  CASE
+    WHEN t.type = 'expense' AND COALESCE(adj.total, 0) > t.amount
+      THEN COALESCE(adj.total, 0) - t.amount
+    ELSE 0
+  END
+`;
+
+// 收入合计 = 真实收入交易 + 超额抵扣
+const grossIncomeSql = `
+  COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0)
+  + COALESCE(SUM(${overageIncomeSql}), 0)
+`;
+
+// 分类统计中追加的「超额抵扣」虚拟收入行（category_id = -1，不可下钻）
+function buildOverageCategoryUnion(whereSql: string): string {
+  return `
+    UNION ALL
+    SELECT
+      -1 as category_id,
+      CASE COALESCE(adj.latest_type, 'reimbursement')
+        WHEN 'cashback' THEN '返现超额'
+        WHEN 'refund' THEN '退款超额'
+        WHEN 'other' THEN '抵扣超额'
+        ELSE '报销超额'
+      END as category_name,
+      CASE COALESCE(adj.latest_type, 'reimbursement')
+        WHEN 'cashback' THEN 'ion:pricetags-outline'
+        WHEN 'refund' THEN 'ion:arrow-undo-outline'
+        WHEN 'other' THEN 'ion:ellipsis-horizontal-circle-outline'
+        ELSE 'ion:receipt-outline'
+      END as category_icon,
+      'income' as type,
+      SUM(${overageIncomeSql}) as total,
+      COUNT(*) as count, MIN(t.date) as first_date, MAX(t.date) as last_date
+    FROM transactions t
+    ${adjustmentJoin}
+    WHERE ${whereSql}
+      AND t.type = 'expense' AND COALESCE(adj.total, 0) > t.amount
+    GROUP BY adj.latest_type
+    HAVING SUM(${overageIncomeSql}) > 0
+  `;
+}
+
 const transactionSelectSql = `
   t.*,
   c.name as category_name,
@@ -128,7 +173,7 @@ export class TransactionRepo {
 
     const result = await db.getFirstAsync<{ income: number; expense: number }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        ${grossIncomeSql} as income,
         COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
        FROM transactions t
        ${adjustmentJoin}
@@ -153,8 +198,9 @@ export class TransactionRepo {
        ${adjustmentJoin}
        WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?
        GROUP BY t.category_id, t.type
+       ${buildOverageCategoryUnion('t.book_id = ? AND t.date >= ? AND t.date <= ?')}
        ORDER BY total DESC`,
-      [bookId, startDate, endDate]
+      [bookId, startDate, endDate, bookId, startDate, endDate]
     );
   }
 
@@ -165,7 +211,7 @@ export class TransactionRepo {
     const db = await getDatabase();
     return db.getAllAsync(
       `SELECT t.date as date,
-        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        ${grossIncomeSql} as income,
         COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
        FROM transactions t
        ${adjustmentJoin}
@@ -183,7 +229,7 @@ export class TransactionRepo {
     const db = await getDatabase();
     const result = await db.getFirstAsync<{ income: number; expense: number }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        ${grossIncomeSql} as income,
         COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
        FROM transactions t
        ${adjustmentJoin}
@@ -207,8 +253,9 @@ export class TransactionRepo {
        ${adjustmentJoin}
        WHERE t.book_id = ? AND t.date >= ? AND t.date <= ?
        GROUP BY t.category_id, t.type
+       ${buildOverageCategoryUnion('t.book_id = ? AND t.date >= ? AND t.date <= ?')}
        ORDER BY total DESC`,
-      [bookId, startDate, endDate]
+      [bookId, startDate, endDate, bookId, startDate, endDate]
     );
   }
 
@@ -220,7 +267,7 @@ export class TransactionRepo {
     const db = await getDatabase();
     const result = await db.getFirstAsync<{ income: number; expense: number }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as income,
+        ${grossIncomeSql} as income,
         COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE 0 END), 0) as expense
        FROM transactions t
        ${adjustmentJoin}`

@@ -605,8 +605,10 @@ export default function StatisticsScreen() {
           ) : (
             <View style={styles.rankList}>
               {filteredCategories.slice(0, 10).map((cat, index) => {
+                // category_id = -1 是「报销超额」等虚拟收入分类，没有分类详情页，不可下钻
+                const isVirtual = cat.category_id < 0;
                 const handlePress = () => {
-                  if (rangeSummary) {
+                  if (rangeSummary && !isVirtual) {
                     navigation.navigate('CategoryDetail' as never, {
                       categoryData: {
                         id: cat.category_id,
@@ -623,10 +625,10 @@ export default function StatisticsScreen() {
                 };
                 return (
                   <TouchableOpacity
-                    key={cat.category_id}
+                    key={`${cat.type}-${cat.category_id}-${cat.category_name}`}
                     style={[styles.rankItem, index === filteredCategories.slice(0, 10).length - 1 && styles.rankItemLast]}
                     onPress={handlePress}
-                    activeOpacity={0.7}
+                    activeOpacity={isVirtual ? 1 : 0.7}
                   >
                     <View style={styles.rankIconBg}>
                       <CategoryIcon categoryName={cat.category_name} iconKey={cat.category_icon} size={18} color={COLORS.text} />
