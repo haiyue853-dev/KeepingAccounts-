@@ -16,7 +16,7 @@ import { LineChart } from 'react-native-chart-kit';
 import Svg, { Circle, G } from 'react-native-svg';
 import { StatisticsService, CategorySummary, DailySummary, RangeSummary } from '../services/StatisticsService';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
-import { COLORS, CHART_COLORS, MASCOTS, SHADOWS } from '../utils/constants';
+import { COLORS, CHART_COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryIcon } from '../components/AppIcon';

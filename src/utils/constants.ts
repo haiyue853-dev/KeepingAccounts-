@@ -1,4 +1,3 @@
-import type { ImageSourcePropType } from 'react-native';
 import { StyleSheet } from 'react-native';
 
 export const COLORS = {
@@ -40,13 +39,6 @@ export const SHADOWS = {
     shadowRadius: 4,
     elevation: 2,
   },
-};
-
-export const MASCOTS: Record<'home' | 'voice' | 'chart' | 'avatar', ImageSourcePropType> = {
-  home: require('../../assets/mascot/mascot-home.png'),
-  voice: require('../../assets/mascot/mascot-voice.png'),
-  chart: require('../../assets/mascot/mascot-chart.png'),
-  avatar: require('../../assets/mascot/mascot-avatar.png'),
 };
 
 export const CHART_COLORS = [

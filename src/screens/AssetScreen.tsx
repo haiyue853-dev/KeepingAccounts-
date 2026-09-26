@@ -1,9 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Image, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, BackHandler } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SHADOWS, MASCOTS } from '../utils/constants';
+import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { getAssetProvider } from '../utils/assetProviders';
 import { sumAssetBalances } from '../utils/assetAmount';
@@ -95,7 +95,6 @@ export default function AssetScreen() {
             <View style={styles.backButton} />
           </View>
           <View style={styles.balanceBlock}>
-            <Image source={MASCOTS.avatar} style={styles.mascot} resizeMode="contain" />
             <Text style={styles.balanceLabel}>总资产</Text>
             {loading ? <ActivityIndicator color={COLORS.text} style={styles.loading} /> : (
               <Text style={styles.balanceText} numberOfLines={1} adjustsFontSizeToFit>{loadError ? '¥ --' : `¥${formatAmount(total)}`}</Text>
@@ -168,8 +167,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backButton: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '600', color: COLORS.text },
-  balanceBlock: { alignItems: 'center', paddingTop: 4 },
-  mascot: { width: 60, height: 60, marginBottom: 2 },
+  balanceBlock: { alignItems: 'center', paddingTop: 20 },
   balanceLabel: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
   balanceText: { fontSize: 42, fontWeight: '600', color: COLORS.text, marginTop: 7, maxWidth: '100%' },
   loading: { marginVertical: 20 },

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, TextInput, ActivityIndicator, Image,
+  ScrollView, TextInput, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, MASCOTS, SHADOWS } from '../utils/constants';
+import { COLORS, SHADOWS } from '../utils/constants';
 import { DeepSeekConfig } from '../services/deepseek/DeepSeekConfig';
 import { DeepSeekTransactionParser, ParsedTransaction } from '../services/deepseek/DeepSeekTransactionParser';
 import { TransactionRepo } from '../repositories/TransactionRepo';
@@ -101,11 +101,9 @@ export default function DiscoverScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
-          <Image source={MASCOTS.voice} style={styles.mascot} resizeMode="contain" />
-          <View style={styles.bubble}>
-            <Text style={styles.bubbleText}>喵~我在听呢</Text>
-            <Text style={styles.bubbleSub}>你说吧~</Text>
-          </View>
+          <View style={styles.voiceIcon}><Ionicons name="mic-outline" size={28} color={COLORS.primaryDark} /></View>
+          <Text style={styles.heroTitle}>语音记账</Text>
+          <Text style={styles.heroSubtitle}>说出或输入一笔收支</Text>
           <View style={styles.waveRow}>
             {[10, 18, 26, 16, 31, 22, 12, 20, 28, 14].map((height, index) => (
               <View key={index} style={[styles.waveBar, { height }]} />
@@ -203,27 +201,18 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   scrollContent: { paddingHorizontal: 18, paddingBottom: 28 },
   hero: {
-    minHeight: 172,
+    minHeight: 156,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -6,
     marginBottom: 0,
   },
-  mascot: { width: 136, height: 122, alignSelf: 'flex-start', marginLeft: 14 },
-  bubble: {
-    position: 'absolute',
-    right: 10,
-    top: 34,
-    backgroundColor: COLORS.background,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  bubbleText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
-  bubbleSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 3 },
+  voiceIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primaryLight, marginBottom: 10 },
+  heroTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text },
+  heroSubtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
   waveRow: {
     position: 'absolute',
-    right: 32,
+    right: 12,
     bottom: 18,
     flexDirection: 'row',
     alignItems: 'center',

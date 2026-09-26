@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Linking, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, MASCOTS, SHADOWS } from '../utils/constants';
+import { COLORS, SHADOWS } from '../utils/constants';
 
 const APP_VERSION = '1.3.1';
 
@@ -24,10 +24,10 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: (insets.top || 24) + 10 }]}>
         <View style={styles.profileRow}>
-          <Image source={MASCOTS.avatar} style={styles.avatar} resizeMode="contain" />
+          <View style={styles.avatar}><Ionicons name="person-outline" size={27} color={COLORS.primaryDark} /></View>
           <View style={styles.userInfo}>
-            <Text style={styles.username}>铲屎官</Text>
-            <Text style={styles.subtitle}>喵喵理财中级用户</Text>
+            <Text style={styles.username}>我的账户</Text>
+            <Text style={styles.subtitle}>记录每一笔收支</Text>
           </View>
         </View>
       </View>
@@ -60,7 +60,7 @@ export default function ProfileScreen() {
         <View style={styles.aboutSection}>
           <Text style={styles.aboutTitle}>关于哈基咪记账</Text>
           <Text style={styles.aboutVersion}>版本 {APP_VERSION}</Text>
-          <Text style={styles.aboutText}>一款可爱猫咪主题的记账应用 🐱</Text>
+          <Text style={styles.aboutText}>简单清晰地管理收支与资产</Text>
           <TouchableOpacity
             style={styles.emailRow}
             onPress={() => Linking.openURL('mailto:hibozeng@qq.com')}
@@ -91,6 +91,8 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: COLORS.background,
     marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   userInfo: { flex: 1 },
   username: { fontSize: 16, fontWeight: '600', color: COLORS.text },

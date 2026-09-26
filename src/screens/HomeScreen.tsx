@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Image,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
   RefreshControl, SectionList, StatusBar, Modal, TextInput, Alert, Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +11,7 @@ import { TransactionRepo } from '../repositories/TransactionRepo';
 import { TransactionAdjustmentRepo } from '../repositories/TransactionAdjustmentRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { Transaction, TransactionAdjustmentType } from '../models/Transaction';
-import { COLORS, MASCOTS, SHADOWS } from '../utils/constants';
+import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 import { CategoryIcon } from '../components/AppIcon';
@@ -321,7 +321,6 @@ export default function HomeScreen() {
           <View>
             <Text style={styles.greetingSub}>今天也要好好记账</Text>
           </View>
-          <Image source={MASCOTS.home} style={styles.headerMascot} resizeMode="contain" />
           <TouchableOpacity style={styles.monthPickerBtn} onPress={() => setShowDatePicker(true)}>
             <Text style={styles.monthText}>{year}年{month}月</Text>
             <Ionicons name="chevron-down" size={16} color={COLORS.text} />
@@ -640,11 +639,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   greetingSub: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
-  headerMascot: {
-    width: 42,
-    height: 42,
-    alignSelf: 'center',
-  },
   monthPickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',

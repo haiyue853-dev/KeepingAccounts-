@@ -5,36 +5,6 @@ type SvgIconProps = { size?: number; color?: string };
 
 // ==================== Logo ====================
 
-/** 哈基咪猫 Logo */
-export function IconCatLogo({ size = 24, color = '#F5A623' }: SvgIconProps) {
-  const s = size, c = color, w = '#FFD447';
-  return (
-    <Svg width={s} height={s} viewBox="0 0 24 24">
-      {/* 猫脸 */}
-      <Circle cx="12" cy="14" r="9" fill={w} stroke={c} strokeWidth="0.8" />
-      {/* 耳朵 */}
-      <Polygon points="4,7 6,13 8,7" fill={c} />
-      <Polygon points="16,7 18,13 20,7" fill={c} />
-      <Polygon points="5,8 6.5,12 7.5,8" fill="#FFE0B2" />
-      <Polygon points="16.5,8 17.5,12 19,8" fill="#FFE0B2" />
-      {/* 眼睛 */}
-      <Circle cx="9" cy="13" r="1.5" fill="#3A2E1F" />
-      <Circle cx="15" cy="13" r="1.5" fill="#3A2E1F" />
-      <Circle cx="9.3" cy="12.5" r="0.5" fill="#fff" />
-      <Circle cx="15.3" cy="12.5" r="0.5" fill="#fff" />
-      {/* 鼻子 */}
-      <Ellipse cx="12" cy="15.5" rx="1" ry="0.7" fill="#FF8383" />
-      {/* 嘴巴 */}
-      <Path d="M11 16.5Q12 17.5 13 16.5" stroke={c} strokeWidth="0.6" fill="none" strokeLinecap="round" />
-      {/* 胡须 */}
-      <Line x1="4" y1="13" x2="7.5" y2="14" stroke={c} strokeWidth="0.4" />
-      <Line x1="4" y1="15.5" x2="7.5" y2="15.2" stroke={c} strokeWidth="0.4" />
-      <Line x1="20" y1="13" x2="16.5" y2="14" stroke={c} strokeWidth="0.4" />
-      <Line x1="20" y1="15.5" x2="16.5" y2="15.2" stroke={c} strokeWidth="0.4" />
-    </Svg>
-  );
-}
-
 // ==================== 收入类图标（金币风格） ====================
 
 /** 金币 — 基础金币图标 */
@@ -523,8 +493,6 @@ export interface SvgIconDef {
 }
 
 export const SVG_ICONS: SvgIconDef[] = [
-  // Logo
-  { key: 'svg:cat-logo', label: '哈基咪', component: IconCatLogo, category: 'general' },
   // 收入
   { key: 'svg:coin', label: '金币', component: IconCoin, category: 'income' },
   { key: 'svg:coins-stack', label: '金币堆', component: IconCoinsStack, category: 'income' },
