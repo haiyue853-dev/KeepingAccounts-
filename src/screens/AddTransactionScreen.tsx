@@ -567,7 +567,7 @@ export default function AddTransactionScreen() {
                 disabled={noteFocused}
               >
                 <View style={[styles.iconCircle, active && styles.iconCircleActive]}>
-                  <CategoryIcon categoryName={cat.name} iconKey={cat.icon} size={22} color={COLORS.primaryDark} />
+                  <CategoryIcon categoryName={cat.name} iconKey={cat.icon} size={22} color={active ? COLORS.primaryDark : COLORS.textSecondary} />
                 </View>
                 <Text style={[styles.catLabel, active && styles.catLabelActive]} numberOfLines={1}>
                   {cat.name}
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E6F1FF',
+    backgroundColor: '#F1F3F5',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 1,
