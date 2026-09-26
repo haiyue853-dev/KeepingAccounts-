@@ -102,11 +102,9 @@ export default function ProfileScreen() {
         <View style={styles.profileRow}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="更换头像" disabled={avatarBusy} onPress={changeAvatar} style={styles.avatar} activeOpacity={0.75}>
             {avatarUri ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} onError={() => { setAvatarUri(null); void AsyncStorage.removeItem(AVATAR_STORAGE_KEY); }} /> : <Ionicons name="person-outline" size={27} color={COLORS.primaryDark} />}
-            <View style={styles.avatarEdit}><Ionicons name="pencil" size={10} color={COLORS.onPrimary} /></View>
           </TouchableOpacity>
           <View style={styles.userInfo}>
             <Text style={styles.username}>我的账户</Text>
-            <Text style={styles.subtitle}>点击头像更换</Text>
           </View>
         </View>
       </LinearGradient>
@@ -176,10 +174,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarImage: { width: 54, height: 54, borderRadius: 27 },
-  avatarEdit: { position: 'absolute', right: -3, bottom: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.surface },
   userInfo: { flex: 1 },
   username: { fontSize: 16, fontWeight: '600', color: COLORS.text },
-  subtitle: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '600' },
   menuList: {
     marginHorizontal: 16,
     marginTop: 12,
