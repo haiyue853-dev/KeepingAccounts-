@@ -1,12 +1,41 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Linking, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
+import { File, Paths } from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showThemedAlert } from '../components/AlertProvider';
 import { COLORS, SHADOWS } from '../utils/constants';
 
 const APP_VERSION = '1.3.1';
+const AVATAR_STORAGE_KEY = 'profile.avatarUri';
+
+function compressWebAvatar(source: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, 256 / Math.max(image.width, image.height));
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('无法处理所选图片');
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      } catch (error) {
+        reject(error);
+      }
+    };
+    image.onerror = () => reject(new Error('无法读取所选图片'));
+    image.src = source;
+  });
+}
 
 const MENU_ITEMS = [
   { icon: 'pricetag-outline' as const, label: '分类管理', screen: 'Category' },
@@ -20,15 +49,64 @@ const MENU_ITEMS = [
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(AVATAR_STORAGE_KEY)
+      .then((uri) => { if (mounted) setAvatarUri(uri); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const changeAvatar = async () => {
+    if (avatarBusy) return;
+    setAvatarBusy(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true, base64: Platform.OS === 'web' });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset || (asset.mimeType && !asset.mimeType.startsWith('image/'))) throw new Error('请选择图片文件');
+
+      let savedUri: string;
+      if (Platform.OS === 'web') {
+        if (!asset.base64) throw new Error('无法读取所选图片');
+        savedUri = await compressWebAvatar(asset.base64);
+      } else {
+        const extension = asset.name.match(/\.(jpe?g|png|webp|heic|gif)$/i)?.[1]?.toLowerCase() ?? 'jpg';
+        const destination = new File(Paths.document, `profile-avatar-${Date.now()}.${extension}`);
+        await new File(asset.uri).copy(destination);
+        savedUri = destination.uri;
+      }
+
+      await AsyncStorage.setItem(AVATAR_STORAGE_KEY, savedUri);
+      const previousUri = avatarUri;
+      setAvatarUri(savedUri);
+      if (Platform.OS !== 'web' && previousUri?.startsWith(Paths.document.uri) && previousUri !== savedUri) {
+        try {
+          const previousFile = new File(previousUri);
+          if (previousFile.exists) previousFile.delete();
+        } catch {}
+      }
+    } catch (error) {
+      showThemedAlert('头像更换失败', error instanceof Error ? error.message : '请稍后重试');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 10 }]}>
         <View style={styles.profileRow}>
-          <View style={styles.avatar}><Ionicons name="person-outline" size={27} color={COLORS.primaryDark} /></View>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="更换头像" disabled={avatarBusy} onPress={changeAvatar} style={styles.avatar} activeOpacity={0.75}>
+            {avatarUri ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} onError={() => { setAvatarUri(null); void AsyncStorage.removeItem(AVATAR_STORAGE_KEY); }} /> : <Ionicons name="person-outline" size={27} color={COLORS.primaryDark} />}
+            <View style={styles.avatarEdit}><Ionicons name="pencil" size={10} color={COLORS.onPrimary} /></View>
+          </TouchableOpacity>
           <View style={styles.userInfo}>
             <Text style={styles.username}>我的账户</Text>
-            <Text style={styles.subtitle}>记录每一笔收支</Text>
+            <Text style={styles.subtitle}>点击头像更换</Text>
           </View>
         </View>
       </LinearGradient>
@@ -97,6 +175,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: { width: 54, height: 54, borderRadius: 27 },
+  avatarEdit: { position: 'absolute', right: -3, bottom: -2, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.surface },
   userInfo: { flex: 1 },
   username: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   subtitle: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '600' },
