@@ -12,7 +12,7 @@ import { TransactionRepo } from '../repositories/TransactionRepo';
 import { CategoryRepo } from '../repositories/CategoryRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { Category, TransactionType } from '../models/Category';
-import { CATEGORY_ICON_TONES, COLORS } from '../utils/constants';
+import { COLORS } from '../utils/constants';
 import { getToday } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
 import DatePickerWheel from '../components/DatePickerWheel';
@@ -558,7 +558,6 @@ export default function AddTransactionScreen() {
         >
           {categories.map((cat, index) => {
             const active = cat.id === categoryId;
-            const iconTone = CATEGORY_ICON_TONES[index % CATEGORY_ICON_TONES.length];
             return (
               <TouchableOpacity
                 key={cat.id}
@@ -567,8 +566,8 @@ export default function AddTransactionScreen() {
                 activeOpacity={0.7}
                 disabled={noteFocused}
               >
-                <View style={[styles.iconCircle, { backgroundColor: iconTone.background, borderColor: iconTone.border }, active && styles.iconCircleActive]}>
-                  <CategoryIcon categoryName={cat.name} iconKey={cat.icon} size={22} color={active ? COLORS.onPrimary : iconTone.color} />
+                <View style={[styles.iconCircle, active && styles.iconCircleActive]}>
+                  <CategoryIcon categoryName={cat.name} iconKey={cat.icon} size={22} color={COLORS.primaryDark} />
                 </View>
                 <Text style={[styles.catLabel, active && styles.catLabelActive]} numberOfLines={1}>
                   {cat.name}
@@ -691,7 +690,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 1,
   },
-  iconCircleActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  iconCircleActive: { backgroundColor: '#DCEBFF', borderColor: COLORS.primary, borderWidth: 2 },
   catLabel: { fontSize: 11, color: COLORS.textSecondary },
   catLabelActive: { color: COLORS.primary, fontWeight: '600' },
 
