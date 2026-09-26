@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "哈基咪记账",
+    "name": "iSave",
     "slug": "bookkeeping-app",
     "version": "1.3.2",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#2563EB",
+        "backgroundColor": "#DBEAFE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,7 +26,15 @@
     "plugins": [
       "expo-sqlite",
       "expo-sharing",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#DBEAFE",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
+        }
+      ]
     ],
     "extra": {
       "eas": {

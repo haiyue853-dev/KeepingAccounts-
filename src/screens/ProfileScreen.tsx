@@ -135,7 +135,7 @@ export default function ProfileScreen() {
 
         {/* 关于 */}
         <View style={styles.aboutSection}>
-          <Text style={styles.aboutTitle}>关于哈基咪记账</Text>
+          <Text style={styles.aboutTitle}>关于 iSave</Text>
           <Text style={styles.aboutVersion}>版本 {APP_VERSION}</Text>
           <Text style={styles.aboutText}>简单清晰地管理收支与资产</Text>
           <TouchableOpacity
