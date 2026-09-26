@@ -132,19 +132,19 @@ export default function BillStatisticsScreen() {
       {/* 顶部导航 */}
       <View style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Ionicons name="close" size={22} color="#fff" />
+          <Ionicons name="close" size={22} color={COLORS.text} />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
           <View style={styles.headerSelectors}>
             <TouchableOpacity style={styles.yearSelector} onPress={() => setShowYearPicker(true)}>
               <Text style={styles.yearText}>{year}年</Text>
-              <Ionicons name="chevron-down" size={14} color="#fff" />
+              <Ionicons name="chevron-down" size={14} color={COLORS.text} />
             </TouchableOpacity>
             {viewMode === 'month' && (
               <TouchableOpacity style={styles.yearSelector} onPress={() => setShowMonthPicker(true)}>
                 <Text style={styles.yearText}>{month}月</Text>
-                <Ionicons name="chevron-down" size={14} color="#fff" />
+                <Ionicons name="chevron-down" size={14} color={COLORS.text} />
               </TouchableOpacity>
             )}
           </View>
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
 
   // 顶部
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     paddingTop: 48,
     paddingBottom: 14,
     paddingHorizontal: 12,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  yearText: { fontSize: 17, fontWeight: '700', color: '#fff' },
+  yearText: { fontSize: 17, fontWeight: '600', color: COLORS.text },
 
   // 切换 Tab
   tabRow: {
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
   },
   tabActive: {
     backgroundColor: COLORS.text,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
 
   // 汇总卡片
   summaryCard: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     margin: 16,
     borderRadius: 12,
     padding: 20,
@@ -415,9 +415,9 @@ const styles = StyleSheet.create({
     top: -20,
     opacity: 0.08,
   },
-  summaryBgSymbol: { fontSize: 140, fontWeight: '900', color: COLORS.text },
+  summaryBgSymbol: { fontSize: 140, fontWeight: '600', color: COLORS.text },
   summaryLabel: { fontSize: 13, color: COLORS.text, opacity: 0.7, marginBottom: 4 },
-  summaryBalance: { fontSize: 30, fontWeight: '700', color: COLORS.text, marginBottom: 20 },
+  summaryBalance: { fontSize: 30, fontWeight: '600', color: COLORS.text, marginBottom: 20 },
   summaryNegative: { color: '#FF3B30' },
   overdraft: { fontSize: 14, color: '#FF3B30', fontWeight: '500' },
   summaryRow: {
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.divider,
   },
-  monthHeaderTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  monthHeaderTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text },
   monthHeaderSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
   emptyBlock: { paddingVertical: 40, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14, color: COLORS.textLight },
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: COLORS.cardBg,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.divider,
   },

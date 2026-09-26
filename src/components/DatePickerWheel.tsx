@@ -217,9 +217,9 @@ const st = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
     borderRadius: 8,
     marginVertical: 4,
   },
-  npValueText: { fontSize: 20, fontWeight: '700', color: COLORS.text },
+  npValueText: { fontSize: 20, fontWeight: '600', color: COLORS.text },
 });

@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.text,
     marginBottom: 8,
     textAlign: 'center',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: COLORS.divider,
     alignItems: 'center',
   },
   cancelText: {

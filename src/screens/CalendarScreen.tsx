@@ -248,7 +248,7 @@ export default function CalendarScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
 
       <View style={[styles.header, { paddingTop: insets.top || 24 }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text },
   todayBtn: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   weekdayRow: {
     flexDirection: 'row',
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#FFF3D0',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   txNote: { fontSize: 11, color: COLORS.textLight },
   txRight: { alignItems: 'flex-end', maxWidth: '45%' },
   txAmount: { fontSize: 14, fontWeight: '600' },
-  txAdjustment: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2, fontWeight: '700' },
+  txAdjustment: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2, fontWeight: '600' },
   income: { color: COLORS.income },
   expense: { color: COLORS.expense },
   empty: { alignItems: 'center', paddingVertical: 70, gap: 8 },

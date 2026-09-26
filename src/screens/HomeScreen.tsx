@@ -308,10 +308,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
 
       <LinearGradient
-        colors={[COLORS.primary, COLORS.primary, COLORS.background]}
+        colors={[COLORS.surface, COLORS.surface, COLORS.surface]}
         locations={[0, 0.65, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     zIndex: 2,
   },
-  greetingSub: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '700' },
+  greetingSub: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
   headerMascot: {
     width: 42,
     height: 42,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     gap: 4,
   },
-  monthText: { fontSize: 12, fontWeight: '800', color: COLORS.text },
+  monthText: { fontSize: 12, fontWeight: '600', color: COLORS.text },
   summaryCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 14,
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 8,
   },
-  summaryTitle: { fontSize: 12, fontWeight: '800', color: COLORS.text },
+  summaryTitle: { fontSize: 12, fontWeight: '600', color: COLORS.text },
   summaryEyeBtn: {
     width: 24,
     height: 28,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   },
   summaryCol: { flex: 1, alignItems: 'center' },
   summaryLabel: { fontSize: 10, color: COLORS.textLight, marginBottom: 2 },
-  summaryVal: { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  summaryVal: { fontSize: 18, fontWeight: '600', color: COLORS.text },
   summarySep: { width: 1, height: 24, backgroundColor: COLORS.divider },
 
   funcBar: {
@@ -695,12 +695,12 @@ const styles = StyleSheet.create({
   funcItem: { flex: 1, alignItems: 'center' },
   funcIconBg: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#FFF6DA',
+    backgroundColor: COLORS.background,
     justifyContent: 'center', alignItems: 'center', marginBottom: 4,
     borderWidth: 1,
     borderColor: COLORS.divider,
   },
-  funcLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '700' },
+  funcLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
 
   listContent: { paddingTop: 8, paddingBottom: 26 },
   dayHeader: {
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   },
   txIconBg: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: '#FFF3D0',
+    backgroundColor: COLORS.background,
     justifyContent: 'center', alignItems: 'center', marginRight: 10,
   },
   txInfo: { flex: 1 },
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
   txRight: { alignItems: 'flex-end', maxWidth: '48%' },
   txAmount: { fontSize: 14, fontWeight: '600' },
   txTime: { fontSize: 10, color: COLORS.textLight },
-  txAdjustment: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2, fontWeight: '700' },
+  txAdjustment: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2, fontWeight: '600' },
   income: { color: COLORS.income },
   expense: { color: COLORS.expense },
 
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FFF4D3',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
   actionSummaryInfo: { flex: 1 },
   actionSummaryName: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   actionSummaryNote: { fontSize: 12, color: COLORS.textLight, marginTop: 2 },
-  actionSummaryAmount: { fontSize: 17, fontWeight: '700' },
+  actionSummaryAmount: { fontSize: 17, fontWeight: '600' },
   actionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: COLORS.divider },
   actionBtn: {
     flexDirection: 'row',
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 15, color: COLORS.text },
   actionCancel: {
     justifyContent: 'center',
-    backgroundColor: '#FFF4D3',
+    backgroundColor: COLORS.background,
   },
   actionCancelText: { fontSize: 15, color: COLORS.text, fontWeight: '600', textAlign: 'center' },
 
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   },
   adjustmentTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLORS.text,
     textAlign: 'center',
   },
@@ -848,10 +848,10 @@ const styles = StyleSheet.create({
   adjustmentTypeText: {
     fontSize: 13,
     color: COLORS.textSecondary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   adjustmentTypeTextActive: {
-    color: COLORS.text,
+    color: COLORS.primary,
   },
   adjustmentInput: {
     minHeight: 42,
@@ -899,12 +899,12 @@ const styles = StyleSheet.create({
   adjustmentCancelText: {
     fontSize: 15,
     color: COLORS.textSecondary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   adjustmentSaveText: {
     fontSize: 15,
-    color: COLORS.text,
-    fontWeight: '800',
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
 
   // 月份下拉选择器

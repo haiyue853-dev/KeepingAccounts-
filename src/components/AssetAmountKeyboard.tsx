@@ -44,7 +44,7 @@ export default function AssetAmountKeyboard({ onKey, onEquals, onSave, saving, i
           </TouchableOpacity>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="保存账户" onPress={onSave}
             disabled={saving} style={styles.save}>
-            {saving ? <ActivityIndicator color={COLORS.text} /> : <Text style={styles.saveText}>保存</Text>}
+            {saving ? <ActivityIndicator color={COLORS.onPrimary} /> : <Text style={styles.saveText}>保存</Text>}
           </TouchableOpacity>
         </View>
       </View>
@@ -56,15 +56,15 @@ export default function AssetAmountKeyboard({ onKey, onEquals, onSave, saving, i
 const styles = StyleSheet.create({
   container: { backgroundColor: '#ECECEC', flexShrink: 0 },
   operators: { flexDirection: 'row' },
-  operator: { flex: 1, height: 42, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDD' },
+  operator: { flex: 1, height: 42, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
   operatorText: { color: COLORS.text, fontSize: 20, fontWeight: '500' },
   numberArea: { flexDirection: 'row' },
   grid: { flex: 3 },
   row: { flexDirection: 'row' },
-  key: { flex: 1, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDD' },
+  key: { flex: 1, height: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.cardBg, borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
   number: { color: COLORS.text, fontSize: 22, fontWeight: '500' },
   actions: { flex: 1 },
-  equals: { flex: 1, backgroundColor: '#FFE8A3', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDD' },
-  save: { flex: 1, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDD' },
-  saveText: { fontSize: 17, color: COLORS.text, fontWeight: '800' },
+  equals: { flex: 1, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
+  save: { flex: 1, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: COLORS.border },
+  saveText: { fontSize: 17, color: COLORS.onPrimary, fontWeight: '600' },
 });

@@ -19,7 +19,7 @@ export default function VoiceButton({ isListening, onStart, onStop }: Props) {
       {isListening ? (
         <ActivityIndicator color="#fff" size="small" />
       ) : (
-        <Ionicons name="mic-outline" size={22} color={COLORS.text} />
+        <Ionicons name="mic-outline" size={22} color={COLORS.onPrimary} />
       )}
       <Text style={styles.text}>{isListening ? '点击停止' : '语音输入'}</Text>
     </TouchableOpacity>
@@ -38,5 +38,5 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   buttonActive: { backgroundColor: COLORS.danger },
-  text: { color: COLORS.text, fontSize: 15, fontWeight: '600' },
+  text: { color: COLORS.onPrimary, fontSize: 15, fontWeight: '600' },
 });

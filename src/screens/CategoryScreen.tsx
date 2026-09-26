@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   iconTabBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   iconTabText: { fontSize: 12, color: COLORS.textSecondary },
-  iconTabTextActive: { color: COLORS.text, fontWeight: '600' },
+  iconTabTextActive: { color: COLORS.onPrimary, fontWeight: '600' },
   iconPickerScroll: { maxHeight: 300, marginBottom: 16 },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   iconCell: {

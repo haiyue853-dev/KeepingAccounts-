@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   appBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
@@ -679,14 +679,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 1,
   },
   iconCircleActive: { backgroundColor: COLORS.primary },
   catLabel: { fontSize: 11, color: COLORS.textSecondary },
-  catLabelActive: { color: COLORS.text, fontWeight: '600' },
+  catLabelActive: { color: COLORS.primary, fontWeight: '600' },
 
   // 备注遮罩
   noteOverlay: {

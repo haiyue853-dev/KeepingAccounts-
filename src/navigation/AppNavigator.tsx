@@ -35,7 +35,7 @@ function HomeTabs() {
     <Tab.Navigator
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#B7A892',
+        tabBarInactiveTintColor: COLORS.textLight,
         tabBarStyle: [styles.tabBar, { height: 62 + (insets.bottom || 0), paddingBottom: (insets.bottom || 6) }],
         tabBarLabelStyle: styles.tabLabel,
         headerShown: false,
@@ -122,7 +122,7 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.primary },
+        headerStyle: { backgroundColor: COLORS.surface },
         headerTintColor: COLORS.text,
         headerTitleStyle: { fontWeight: '600' },
       }}
@@ -134,12 +134,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Category"
         component={CategoryScreen}
-        options={{ title: '分类管理', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.text }}
+        options={{ title: '分类管理', headerStyle: { backgroundColor: COLORS.surface }, headerTintColor: COLORS.text }}
       />
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: '设置', headerStyle: { backgroundColor: COLORS.primary }, headerTintColor: COLORS.text }}
+        options={{ title: '设置', headerStyle: { backgroundColor: COLORS.surface }, headerTintColor: COLORS.text }}
       />
       <Stack.Screen
         name="Budget"
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 5,
-    borderColor: '#FFF4D3',
+    borderColor: COLORS.background,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0,
     shadowRadius: 10,
-    elevation: 6,
+    elevation: 0,
   },
 });

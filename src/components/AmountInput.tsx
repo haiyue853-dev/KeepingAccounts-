@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 36,
-    fontWeight: '700',
+    fontWeight: '600',
     color: COLORS.text,
     paddingVertical: 8,
   },

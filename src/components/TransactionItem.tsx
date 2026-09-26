@@ -71,5 +71,5 @@ const styles = StyleSheet.create({
   right: { alignItems: 'flex-end', maxWidth: '48%' },
   amount: { fontSize: 16, fontWeight: '600' },
   date: { fontSize: 12, color: COLORS.textLight, marginTop: 2 },
-  adjustmentText: { color: COLORS.textSecondary, fontWeight: '700' },
+  adjustmentText: { color: COLORS.textSecondary, fontWeight: '600' },
 });

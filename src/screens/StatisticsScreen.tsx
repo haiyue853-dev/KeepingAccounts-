@@ -234,7 +234,7 @@ function MiniDonut({ data, total, type }: { data: CategorySummary[]; total: numb
             cx={CIRCLE_SIZE / 2}
             cy={CIRCLE_SIZE / 2}
             r={CIRCLE_RADIUS}
-            stroke="#F7EBD6"
+            stroke={COLORS.divider}
             strokeWidth={CIRCLE_STROKE}
             fill="none"
           />
@@ -573,7 +573,7 @@ export default function StatisticsScreen() {
                 propsForDots: {
                   r: '3',
                   strokeWidth: '0',
-                  fill: '#FFB52E',
+                  fill: COLORS.primaryDark,
                 },
                 propsForBackgroundLines: {
                   strokeDasharray: '4',
@@ -715,14 +715,14 @@ export default function StatisticsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 18,
     paddingBottom: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerTitle: { fontSize: 16, fontWeight: '900', color: COLORS.text },
+  headerTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   headerSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 4 },
   monthPill: {
     flexDirection: 'row',
@@ -733,7 +733,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     gap: 4,
   },
-  monthPillText: { fontSize: 12, fontWeight: '800', color: COLORS.text },
+  monthPillText: { fontSize: 12, fontWeight: '600', color: COLORS.text },
   scrollContent: { padding: 16, paddingBottom: 24 },
   summaryCardCompact: {
     backgroundColor: COLORS.surface,
@@ -755,10 +755,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...SHADOWS.card,
   },
-  summaryLabelCompact: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
-  summaryAmountCompact: { fontSize: 22, color: COLORS.text, fontWeight: '900', marginTop: 6 },
-  summaryLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
-  summaryAmount: { fontSize: 25, color: COLORS.text, fontWeight: '900', marginTop: 8 },
+  summaryLabelCompact: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  summaryAmountCompact: { fontSize: 22, color: COLORS.text, fontWeight: '600', marginTop: 6 },
+  summaryLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  summaryAmount: { fontSize: 25, color: COLORS.text, fontWeight: '600', marginTop: 8 },
   summaryDaily: { fontSize: 12, color: COLORS.textSecondary, marginTop: 8 },
   summaryMascot: { width: 112, height: 104, marginRight: -8 },
   segmentRow: {
@@ -770,8 +770,8 @@ const styles = StyleSheet.create({
   },
   segmentBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 14 },
   segmentActive: { backgroundColor: COLORS.primaryLight },
-  segmentText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '700' },
-  segmentTextActive: { color: COLORS.text, fontWeight: '900' },
+  segmentText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
+  segmentTextActive: { color: COLORS.primary, fontWeight: '600' },
   toggleRow: {
     flexDirection: 'row',
     gap: 10,
@@ -785,8 +785,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleActive: { backgroundColor: COLORS.primary },
-  toggleText: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary },
-  toggleTextActive: { color: COLORS.text, fontWeight: '900' },
+  toggleText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  toggleTextActive: { color: COLORS.onPrimary, fontWeight: '600' },
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: 18,
@@ -795,30 +795,30 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { fontSize: 15, fontWeight: '900', color: COLORS.text, marginBottom: 12 },
+  cardTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginBottom: 12 },
   donutSection: { flexDirection: 'row', alignItems: 'center' },
   donutWrap: { width: CIRCLE_SIZE, height: CIRCLE_SIZE, alignItems: 'center', justifyContent: 'center' },
   donutCenter: { position: 'absolute', alignItems: 'center' },
-  donutLabel: { fontSize: 10, color: COLORS.textLight, fontWeight: '700' },
-  donutValue: { fontSize: 13, color: COLORS.text, fontWeight: '900', marginTop: 3 },
+  donutLabel: { fontSize: 10, color: COLORS.textLight, fontWeight: '600' },
+  donutValue: { fontSize: 13, color: COLORS.text, fontWeight: '600', marginTop: 3 },
   legendList: { flex: 1, paddingLeft: 10, gap: 9 },
   legendRow: { flexDirection: 'row', alignItems: 'center' },
   legendDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  legendName: { flex: 1, fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
-  legendPercent: { width: 48, textAlign: 'right', fontSize: 12, color: COLORS.text, fontWeight: '800' },
+  legendName: { flex: 1, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  legendPercent: { width: 48, textAlign: 'right', fontSize: 12, color: COLORS.text, fontWeight: '600' },
   navGroup: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   navBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
   chart: { borderRadius: 12, marginLeft: 0, alignSelf: 'center' },
   noDataChart: { height: 180, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  noDataText: { fontSize: 13, color: COLORS.textLight, fontWeight: '700' },
+  noDataText: { fontSize: 13, color: COLORS.textLight, fontWeight: '600' },
   yearOverlay: { flex: 1, backgroundColor: 'rgba(58,46,31,0.35)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 88, paddingRight: 18 },
   yearDropdown: { backgroundColor: '#fff', borderRadius: 18, width: 300, maxHeight: 420, padding: 16 },
-  yearDropdownTitle: { fontSize: 16, fontWeight: '900', color: COLORS.text, textAlign: 'center', marginBottom: 12 },
+  yearDropdownTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, textAlign: 'center', marginBottom: 12 },
   yearList: {},
   yearItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10 },
   yearItemActive: { backgroundColor: COLORS.primaryLight },
   yearItemText: { fontSize: 15, color: COLORS.text },
-  yearItemTextActive: { color: COLORS.text, fontWeight: '900' },
+  yearItemTextActive: { color: COLORS.primary, fontWeight: '600' },
   yearWheelContainer: {
     height: 132,  // 显示3个年份，每个44px
     marginBottom: 12,
@@ -847,8 +847,8 @@ const styles = StyleSheet.create({
   },
   yearWheelTextActive: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   rankList: {
     backgroundColor: COLORS.surface,
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFF3D0',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
