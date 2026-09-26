@@ -308,10 +308,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerSurface} />
 
       <LinearGradient
-        colors={[COLORS.surface, COLORS.surface, COLORS.surface]}
+        colors={[COLORS.headerSurface, COLORS.headerSurface, COLORS.headerSurface]}
         locations={[0, 0.65, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -642,7 +642,9 @@ const styles = StyleSheet.create({
   monthPickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.controlBorder,
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -669,6 +671,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: COLORS.controlSurface,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -689,10 +692,10 @@ const styles = StyleSheet.create({
   funcItem: { flex: 1, alignItems: 'center' },
   funcIconBg: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.controlSurface,
     justifyContent: 'center', alignItems: 'center', marginBottom: 4,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: COLORS.controlBorder,
   },
   funcLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
 

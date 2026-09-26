@@ -92,7 +92,7 @@ export default function AssetScreen() {
               <Ionicons name="chevron-back" size={23} color={COLORS.text} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>资产管理</Text>
-            <View style={styles.backButton} />
+            <View style={styles.headerSpacer} />
           </View>
           <View style={styles.balanceBlock}>
             <Text style={styles.balanceLabel}>总资产</Text>
@@ -163,9 +163,10 @@ export default function AssetScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { backgroundColor: COLORS.surface, paddingHorizontal: 18, paddingBottom: 26, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 },
+  header: { backgroundColor: COLORS.headerSurface, paddingHorizontal: 18, paddingBottom: 26, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backButton: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+  backButton: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: 19, borderWidth: 1, borderColor: COLORS.controlBorder },
+  headerSpacer: { width: 38, height: 38 },
   headerTitle: { fontSize: 17, fontWeight: '600', color: COLORS.text },
   balanceBlock: { alignItems: 'center', paddingTop: 20 },
   balanceLabel: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   totalCaptionText: { fontSize: 11, color: COLORS.textSecondary },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 18, marginTop: 23, marginBottom: 14 },
   sectionTitle: { fontSize: 17, fontWeight: '600', color: COLORS.text },
-  addSmall: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: COLORS.primaryLight, gap: 3 },
+  addSmall: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: COLORS.controlSurface, borderWidth: 1, borderColor: COLORS.controlBorder, gap: 3 },
   addSmallText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
   accountCard: { marginHorizontal: 16, marginBottom: 12, padding: 16, borderRadius: 20, backgroundColor: COLORS.surface, ...SHADOWS.card },
   accountMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -191,6 +192,6 @@ const styles = StyleSheet.create({
   emptyIcons: { flexDirection: 'row', gap: 12, marginBottom: 18 },
   emptyTitle: { fontSize: 17, color: COLORS.text, fontWeight: '600', marginVertical: 10 },
   caption: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 19 },
-  emptyAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primaryLight, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13, marginTop: 22, gap: 5 },
+  emptyAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.controlSurface, borderWidth: 1, borderColor: COLORS.controlBorder, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13, marginTop: 22, gap: 5 },
   disclaimer: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: 12, paddingHorizontal: 30, lineHeight: 18 },
 });

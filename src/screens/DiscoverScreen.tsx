@@ -96,7 +96,7 @@ export default function DiscoverScreen() {
           <Ionicons name="chevron-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>语音记账</Text>
-        <View style={styles.backBtn} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -184,7 +184,7 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.headerSurface,
     paddingHorizontal: 16,
     paddingBottom: 10,
     flexDirection: 'row',
@@ -197,7 +197,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.controlBorder,
   },
+  headerSpacer: { width: 36, height: 36 },
   headerTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   scrollContent: { paddingHorizontal: 18, paddingBottom: 28 },
   hero: {

@@ -150,7 +150,7 @@ export default function BudgetScreen() {
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>月预算</Text>
-        <View style={styles.headerBack} />
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* 月份切换 */}
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
 
   // 顶部
   header: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     paddingTop: 48,
     paddingBottom: 14,
     paddingHorizontal: 12,
@@ -452,7 +452,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerBack: { width: 40, alignItems: 'center' },
+  headerBack: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.controlBorder },
+  headerSpacer: { width: 40, height: 40 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: COLORS.text },
 
   // 月份切换
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.divider,
   },

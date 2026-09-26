@@ -150,7 +150,7 @@ export default function BillStatisticsScreen() {
           </View>
         </View>
 
-        <View style={styles.headerBtn} />
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* 月账单/年账单切换 */}
@@ -362,14 +362,15 @@ const styles = StyleSheet.create({
 
   // 顶部
   header: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     paddingTop: 48,
     paddingBottom: 14,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerBtn: { width: 40, alignItems: 'center' },
+  headerBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.controlBorder },
+  headerSpacer: { width: 40, height: 40 },
   headerCenter: { flex: 1, alignItems: 'center' },
   headerSelectors: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   yearSelector: {

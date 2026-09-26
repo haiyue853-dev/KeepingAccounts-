@@ -191,7 +191,7 @@ export default function CategoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  tabRow: { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.divider },
+  tabRow: { flexDirection: 'row', backgroundColor: COLORS.headerSurface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.controlBorder },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
   tabText: { fontSize: 15, color: COLORS.textSecondary },
@@ -209,7 +209,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.controlSurface,
+    borderWidth: 1,
+    borderColor: COLORS.controlBorder,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

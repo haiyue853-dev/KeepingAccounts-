@@ -141,8 +141,8 @@ export default function AssetAccountEditor({ account, onSave, onCancel, insetsBo
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.surface, paddingHorizontal: 12, paddingBottom: 14 },
-  headerButton: { minWidth: 48, minHeight: 38, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.headerSurface, paddingHorizontal: 12, paddingBottom: 14 },
+  headerButton: { minWidth: 48, minHeight: 38, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1, borderColor: COLORS.controlBorder },
   title: { fontSize: 17, fontWeight: '600', color: COLORS.text },
   headerSave: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
   scroll: { flex: 1 },

@@ -715,7 +715,7 @@ export default function StatisticsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     paddingHorizontal: 18,
     paddingBottom: 18,
     flexDirection: 'row',
@@ -727,7 +727,9 @@ const styles = StyleSheet.create({
   monthPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.controlBorder,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -807,7 +809,7 @@ const styles = StyleSheet.create({
   legendName: { flex: 1, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   legendPercent: { width: 48, textAlign: 'right', fontSize: 12, color: COLORS.text, fontWeight: '600' },
   navGroup: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  navBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
+  navBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.controlSurface, borderWidth: 1, borderColor: COLORS.controlBorder, alignItems: 'center', justifyContent: 'center' },
   chart: { borderRadius: 12, marginLeft: 0, alignSelf: 'center' },
   noDataChart: { height: 180, alignItems: 'center', justifyContent: 'center', gap: 8 },
   noDataText: { fontSize: 13, color: COLORS.textLight, fontWeight: '600' },

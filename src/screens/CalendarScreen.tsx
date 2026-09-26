@@ -248,7 +248,7 @@ export default function CalendarScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerSurface} />
 
       <View style={[styles.header, { paddingTop: insets.top || 24 }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
@@ -378,11 +378,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
-  headerBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  headerBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: 20, borderWidth: 1, borderColor: COLORS.controlBorder },
   monthPickerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   todayBtn: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   weekdayRow: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,

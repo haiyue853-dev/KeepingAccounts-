@@ -122,7 +122,7 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.surface },
+        headerStyle: { backgroundColor: COLORS.headerSurface },
         headerTintColor: COLORS.text,
         headerTitleStyle: { fontWeight: '600' },
       }}
@@ -134,12 +134,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Category"
         component={CategoryScreen}
-        options={{ title: '分类管理', headerStyle: { backgroundColor: COLORS.surface }, headerTintColor: COLORS.text }}
+        options={{ title: '分类管理', headerStyle: { backgroundColor: COLORS.headerSurface }, headerTintColor: COLORS.text }}
       />
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: '设置', headerStyle: { backgroundColor: COLORS.surface }, headerTintColor: COLORS.text }}
+        options={{ title: '设置', headerStyle: { backgroundColor: COLORS.headerSurface }, headerTintColor: COLORS.text }}
       />
       <Stack.Screen
         name="Budget"
@@ -175,9 +175,9 @@ const styles = StyleSheet.create({
     height: 62,
     paddingBottom: 6,
     paddingTop: 6,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.headerSurface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.divider,
+    borderTopColor: COLORS.controlBorder,
   },
   tabLabel: { fontSize: 10, marginTop: -1, fontWeight: '600' },
   centerBtnWrap: {
