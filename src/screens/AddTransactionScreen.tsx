@@ -7,11 +7,12 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { showThemedAlert } from '../components/AlertProvider';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { TransactionRepo } from '../repositories/TransactionRepo';
 import { CategoryRepo } from '../repositories/CategoryRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { Category, TransactionType } from '../models/Category';
-import { COLORS } from '../utils/constants';
+import { CATEGORY_ICON_TONES, COLORS } from '../utils/constants';
 import { getToday } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
 import DatePickerWheel from '../components/DatePickerWheel';
@@ -514,7 +515,7 @@ export default function AddTransactionScreen() {
   return (
     <View style={styles.container}>
       {/* 顶部 AppBar */}
-      <View style={[styles.appBar, { paddingTop: (insets.top || 24) + 6 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.appBar, { paddingTop: (insets.top || 24) + 6 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelBtn}>
           <Ionicons name="close" size={22} color={COLORS.text} />
         </TouchableOpacity>
@@ -532,8 +533,8 @@ export default function AddTransactionScreen() {
             <Text style={[styles.tabText, type === 'income' && styles.tabTextActive]}>收入</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.cancelBtn} />
-      </View>
+        <View style={styles.headerSpacer} />
+      </LinearGradient>
 
       {/* 分类网格 — 上方区域，自然填充剩余空间 */}
       <Animated.View
@@ -557,6 +558,7 @@ export default function AddTransactionScreen() {
         >
           {categories.map((cat, index) => {
             const active = cat.id === categoryId;
+            const iconTone = CATEGORY_ICON_TONES[index % CATEGORY_ICON_TONES.length];
             return (
               <TouchableOpacity
                 key={cat.id}
@@ -565,8 +567,8 @@ export default function AddTransactionScreen() {
                 activeOpacity={0.7}
                 disabled={noteFocused}
               >
-                <View style={[styles.iconCircle, active && styles.iconCircleActive]}>
-                  <CategoryIcon categoryName={cat.name} iconKey={cat.icon} size={22} color={active ? '#333' : '#666'} />
+                <View style={[styles.iconCircle, { backgroundColor: iconTone.background, borderColor: iconTone.border }, active && styles.iconCircleActive]}>
+                  <CategoryIcon categoryName={cat.name} iconKey={cat.icon} size={22} color={active ? COLORS.onPrimary : iconTone.color} />
                 </View>
                 <Text style={[styles.catLabel, active && styles.catLabelActive]} numberOfLines={1}>
                   {cat.name}
@@ -644,6 +646,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   cancelBtn: { width: 40, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, borderRadius: 18, borderWidth: 1, borderColor: COLORS.controlBorder },
+  headerSpacer: { width: 40, height: 36 },
   logoWrap: { marginRight: 6, justifyContent: 'center', alignItems: 'center' },
   tabWrap: {
     flex: 1,
@@ -688,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 1,
   },
-  iconCircleActive: { backgroundColor: COLORS.primary },
+  iconCircleActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   catLabel: { fontSize: 11, color: COLORS.textSecondary },
   catLabelActive: { color: COLORS.primary, fontWeight: '600' },
 

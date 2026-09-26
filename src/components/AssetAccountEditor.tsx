@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import type { AssetAccount, AssetAccountInput } from '../models/AssetAccount';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { ASSET_PROVIDERS, getAssetProvider } from '../utils/assetProviders';
@@ -70,7 +71,7 @@ export default function AssetAccountEditor({ account, onSave, onCancel, insetsBo
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={[styles.header, { paddingTop: insetsTop + 10 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: insetsTop + 10 }]}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="取消编辑账户" disabled={saving} onPress={onCancel} style={styles.headerButton}>
           <Ionicons name="chevron-back" size={23} color={COLORS.text} />
         </TouchableOpacity>
@@ -78,7 +79,7 @@ export default function AssetAccountEditor({ account, onSave, onCancel, insetsBo
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="完成账户编辑" disabled={saving} onPress={save} style={styles.headerButton}>
           <Text style={styles.headerSave}>{saving ? '保存中' : '完成'}</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="选择银行或账户类型" disabled={saving}

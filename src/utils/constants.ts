@@ -50,6 +50,13 @@ export const CHART_COLORS = [
   '#64748B', '#0D9488', '#4338CA', '#334155', '#0369A1', '#713F12',
 ];
 
+export const CATEGORY_ICON_TONES = [
+  { color: '#1D4ED8', background: '#EAF3FF', border: '#C9DEFA' },
+  { color: '#0F766E', background: '#E7F7F3', border: '#B7E3D8' },
+  { color: '#7C3AED', background: '#F1EBFF', border: '#DCCBFF' },
+  { color: '#B45309', background: '#FFF4E5', border: '#F5DCB1' },
+];
+
 export const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
 // 分类图标映射（线性简约风格用 emoji 代替，后续可替换为 SVG）

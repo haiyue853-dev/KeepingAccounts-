@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADOWS } from '../utils/constants';
 
@@ -22,7 +23,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: (insets.top || 24) + 10 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 10 }]}>
         <View style={styles.profileRow}>
           <View style={styles.avatar}><Ionicons name="person-outline" size={27} color={COLORS.primaryDark} /></View>
           <View style={styles.userInfo}>
@@ -30,7 +31,7 @@ export default function ProfileScreen() {
             <Text style={styles.subtitle}>记录每一笔收支</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
         <View style={styles.menuList}>

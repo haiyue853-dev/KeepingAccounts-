@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, A
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { getAssetProvider } from '../utils/assetProviders';
@@ -86,7 +87,7 @@ export default function AssetScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 30 + insets.bottom }} refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={COLORS.primaryDark} colors={[COLORS.primaryDark]} />
       }>
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <View style={styles.headerRow}>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="返回我的页面" onPress={() => navigation.goBack()} style={styles.backButton}>
               <Ionicons name="chevron-back" size={23} color={COLORS.text} />
@@ -104,7 +105,7 @@ export default function AssetScreen() {
               <Text style={styles.totalCaptionText}>{loadError ? '加载失败，请重试' : `${accounts.length} 个账户 · 当前余额合计`}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         <View style={styles.sectionHeading}>
           <Text style={styles.sectionTitle}>我的账户</Text>

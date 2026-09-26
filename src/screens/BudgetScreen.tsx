@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { showThemedAlert, showThemedConfirm } from "../components/AlertProvider";
 import { useNavigation } from '@react-navigation/native';
@@ -145,13 +146,13 @@ export default function BudgetScreen() {
   return (
     <View style={styles.container}>
       {/* 顶部黄色导航栏 */}
-      <View style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBack}>
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>月预算</Text>
         <View style={styles.headerSpacer} />
-      </View>
+      </LinearGradient>
 
       {/* 月份切换 */}
       <View style={styles.monthBar}>
@@ -462,7 +463,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    backgroundColor: COLORS.headerSurface,
+    backgroundColor: COLORS.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.divider,
   },

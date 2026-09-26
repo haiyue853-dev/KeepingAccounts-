@@ -4,6 +4,7 @@ import {
   ScrollView, TextInput, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADOWS } from '../utils/constants';
@@ -91,13 +92,13 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: (insets.top || 24) + 10 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 10 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>语音记账</Text>
         <View style={styles.headerSpacer} />
-      </View>
+      </LinearGradient>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
@@ -130,10 +131,10 @@ export default function DiscoverScreen() {
           activeOpacity={0.86}
         >
           {loading ? (
-            <ActivityIndicator color={COLORS.text} size="small" />
+            <ActivityIndicator color={COLORS.onPrimary} size="small" />
           ) : (
             <>
-              <Ionicons name="sparkles" size={18} color={COLORS.text} />
+              <Ionicons name="sparkles" size={18} color={COLORS.onPrimary} />
               <Text style={styles.parseBtnText}>AI 智能解析</Text>
             </>
           )}

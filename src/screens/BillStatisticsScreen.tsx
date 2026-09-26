@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
@@ -130,7 +131,7 @@ export default function BillStatisticsScreen() {
   return (
     <View style={styles.container}>
       {/* 顶部导航 */}
-      <View style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
           <Ionicons name="close" size={22} color={COLORS.text} />
         </TouchableOpacity>
@@ -151,7 +152,7 @@ export default function BillStatisticsScreen() {
         </View>
 
         <View style={styles.headerSpacer} />
-      </View>
+      </LinearGradient>
 
       {/* 月账单/年账单切换 */}
       <View style={styles.tabRow}>

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, G } from 'react-native-svg';
 import { StatisticsService, CategorySummary, DailySummary, RangeSummary } from '../services/StatisticsService';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
@@ -473,7 +474,7 @@ export default function StatisticsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
         <View>
           <Text style={styles.headerTitle}>图表</Text>
           <Text style={styles.headerSub}>支出分类占比和趋势</Text>
@@ -482,7 +483,7 @@ export default function StatisticsScreen() {
           <Text style={styles.monthPillText}>{getTimeLabel()}</Text>
           <Ionicons name="chevron-down" size={14} color={COLORS.text} />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.summaryCardCompact}>

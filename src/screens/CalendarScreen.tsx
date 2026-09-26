@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { TransactionRepo } from '../repositories/TransactionRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
@@ -250,7 +251,7 @@ export default function CalendarScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerSurface} />
 
-      <View style={[styles.header, { paddingTop: insets.top || 24 }]}>
+      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: insets.top || 24 }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <Ionicons name="chevron-back-outline" size={24} color={COLORS.text} />
         </TouchableOpacity>
@@ -265,7 +266,7 @@ export default function CalendarScreen() {
         <TouchableOpacity style={styles.headerBtn} onPress={goToday} activeOpacity={0.7}>
           <Text style={styles.todayBtn}>今天</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <View style={styles.weekdayRow}>
         {WEEKDAYS.map((day) => (
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
   todayBtn: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   weekdayRow: {
     flexDirection: 'row',
-    backgroundColor: COLORS.headerSurface,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
