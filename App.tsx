@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -39,6 +39,28 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Corporate Clean pointer and keyboard feedback on Web.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const style = document.createElement('style');
+    style.textContent = `
+      button, [role="button"], [role="tab"] { transition: transform 150ms ease-out, box-shadow 150ms ease-out; }
+      @media (hover: hover) {
+        button:hover, [role="button"]:hover, [role="tab"]:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(15,23,42,.10); }
+      }
+      button:active, [role="button"]:active, [role="tab"]:active { transform: scale(.98); }
+      button:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible,
+      input:focus-visible, textarea:focus-visible { outline: 2px solid #3B82F6 !important; outline-offset: 2px !important; }
+      @media (prefers-reduced-motion: reduce) {
+        button, [role="button"], [role="tab"] { transition: none; }
+        button:hover, [role="button"]:hover, [role="tab"]:hover,
+        button:active, [role="button"]:active, [role="tab"]:active { transform: none; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
 
   const initApp = async () => {
     try {

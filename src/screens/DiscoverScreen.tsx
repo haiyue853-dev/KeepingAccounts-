@@ -237,11 +237,11 @@ const styles = StyleSheet.create({
   inputCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
+    ...SHADOWS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
     minHeight: 118,
     padding: 14,
-    ...SHADOWS.card,
   },
   textInput: {
     fontSize: 15,

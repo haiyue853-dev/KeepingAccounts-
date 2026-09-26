@@ -1,41 +1,44 @@
 import type { ImageSourcePropType } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 export const COLORS = {
-  primary: '#0066CC',
-  primaryDark: '#0071E3',
-  primaryLight: '#F5F5F7',
+  primary: '#2563EB',
+  primaryDark: '#1D4ED8',
+  primaryLight: '#EFF6FF',
   onPrimary: '#FFFFFF',
-  accent: '#0066CC',
-  background: '#F5F5F7',
+  accent: '#2563EB',
+  background: '#F8FAFC',
   surface: '#FFFFFF',
-  cardBg: '#FAFAFC',
-  text: '#1D1D1F',
-  textSecondary: '#6E6E73',
-  textLight: '#7A7A7A',
-  border: '#E0E0E0',
-  divider: '#F0F0F0',
-  income: '#248A3D',
-  expense: '#1D1D1F',
-  danger: '#D70015',
-  warning: '#B06A00',
-  chartBlue: '#0066CC',
-  chartMint: '#248A3D',
+  cardBg: '#F9FAFB',
+  text: '#111827',
+  textSecondary: '#374151',
+  textLight: '#6B7280',
+  border: '#D1D5DB',
+  divider: '#E5E7EB',
+  income: '#16A34A',
+  expense: '#111827',
+  danger: '#DC2626',
+  warning: '#D97706',
+  chartBlue: '#2563EB',
+  chartMint: '#16A34A',
 };
 
 export const SHADOWS = {
   card: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 1,
   },
   floating: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
 };
 
@@ -47,9 +50,9 @@ export const MASCOTS: Record<'home' | 'voice' | 'chart' | 'avatar', ImageSourceP
 };
 
 export const CHART_COLORS = [
-  '#FF6B6B', '#FFD447', '#79A8FF', '#73D5B6', '#FFB52E',
-  '#B8A7FF', '#6BC77B', '#F7DC6F', '#FF9F1C', '#9AD9E8',
-  '#FF8FAB', '#8BD17C', '#FFA177', '#C5A3FF', '#5EC4D4', '#FFCDB2',
+  '#2563EB', '#16A34A', '#D97706', '#475569', '#0F766E',
+  '#4F46E5', '#6B7280', '#1D4ED8', '#15803D', '#B45309',
+  '#64748B', '#0D9488', '#4338CA', '#334155', '#0369A1', '#713F12',
 ];
 
 export const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];

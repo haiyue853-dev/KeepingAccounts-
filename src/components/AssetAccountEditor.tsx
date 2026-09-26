@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   headerSave: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 14, paddingBottom: 24 },
-  card: { backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: 'transparent', ...SHADOWS.card },
+  card: { backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, ...SHADOWS.card, borderWidth: 1, borderColor: COLORS.divider },
   providerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   providerText: { flex: 1 },
   label: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
