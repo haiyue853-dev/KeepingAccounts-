@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Keyboard, Animated, Platform, Dimensions, Vibration,
+  TextInput, Keyboard, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../utils/constants';
@@ -87,6 +87,8 @@ export default function TransactionInputPanel({
   // 包括底部白色安全区 View，导致虚拟按键遮住键盘
   // 让 container 高度由内容自然决定
   const noteInputRef = useRef<TextInput>(null);
+  const [opRowHeight, setOpRowHeight] = useState(38);
+  const [numAreaHeight, setNumAreaHeight] = useState(184);
 
   return (
     <View style={[styles.container]}>
@@ -204,15 +206,14 @@ export default function TransactionInputPanel({
           {
             // ⚠️ 关键代码锁（受 PROJECT_NOTES.md #3 保护 - Lock-1）
             // 收起状态高度 = 0（完全收起，不占位空间，避免大块空白）
-            // 展开状态高度 = 222 + insetsBottom（精确等于内容高度，无顶部空白）
-            //   组成: opRow 38px + numArea 184px + 底部白底 insetsBottom = 222 + insetsBottom
-            // Web 平台额外增加 8px 缓冲，防止浏览器渲染差异导致底部按键被截断
+            // 展开高度按运算符行和数字区的实际布局计算，再加底部安全区。
+            // Web 字体与原生平台尺寸不同，固定 222px 会裁掉最下方按键。
             // 禁止修改：除非更新 PROJECT_NOTES.md 并记录原因
             // 参考文档：PROJECT_NOTES.md #3 虚拟按键遮挡记账菜单 + 键盘收起空白
             // 背景色由 styles.keyboard 提供 = '#ECECEC'，禁止用 inline 覆盖为白色
             height: keyboardAnim.interpolate({
               inputRange: [0, 1],
-              outputRange: [0, 222 + (insetsBottom || 0) + (Platform.OS === 'web' ? 8 : 0)],
+              outputRange: [0, opRowHeight + numAreaHeight + (insetsBottom || 0)],
             }),
             opacity: keyboardAnim.interpolate({
               inputRange: [0, 1],
@@ -226,14 +227,14 @@ export default function TransactionInputPanel({
         {noteFocused ? null : (
           // 完整数字键盘
           <>
-            <View style={styles.opRow}>
+            <View style={styles.opRow} onLayout={(event) => setOpRowHeight(event.nativeEvent.layout.height)}>
               {OP_ROW.map((op) => (
                 <TouchableOpacity key={op} style={styles.opBtn} onPress={() => onOp(op)}>
                   <Text style={styles.opText}>{op}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.numArea}>
+            <View style={styles.numArea} onLayout={(event) => setNumAreaHeight(event.nativeEvent.layout.height)}>
               <View style={styles.numGrid}>
                 {NUM_ROWS.map((row, ri) => (
                   <View key={ri} style={styles.numRow}>

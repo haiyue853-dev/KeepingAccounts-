@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, StatusBar,
-  Modal, ScrollView, Dimensions,
+  Modal, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,12 +15,7 @@ import { formatAmount } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
 import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GRID_PADDING = 16;
 const ITEM_MARGIN = 2;
-const COLUMNS = 7;
-const DAY_ITEM_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - ITEM_MARGIN * (COLUMNS - 1)) / COLUMNS;
-const DAY_ITEM_HEIGHT = DAY_ITEM_WIDTH * 1.3;
 
 interface DayData {
   date: string;
@@ -403,8 +398,9 @@ const styles = StyleSheet.create({
   calendarGrid: { backgroundColor: COLORS.surface, paddingHorizontal: 16, paddingVertical: 8 },
   calendarRow: { flexDirection: 'row', marginBottom: 4 },
   dayItem: {
-    width: DAY_ITEM_WIDTH,
-    height: DAY_ITEM_HEIGHT,
+    flex: 1,
+    minWidth: 0,
+    aspectRatio: 1 / 1.3,
     borderRadius: 14,
     backgroundColor: COLORS.background,
     marginHorizontal: ITEM_MARGIN,

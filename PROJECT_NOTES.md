@@ -75,6 +75,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 
 ### 3. 虚拟按键遮挡记账菜单 + 键盘收起空白
 
+**2026-09-26 补充修复原因：** Web 端实测运算符行 45px、数字区 220px，合计 265px；旧的 `222 + 8` 固定高度只有 230px，`overflow: hidden` 会裁掉最下方数字键。原有的 `insets.bottom` 虚拟按键安全区仍需保留。将键盘展开高度改为两块内容的 `onLayout` 实测高度之和，再加 `insets.bottom`；收起高度继续为 0，容器继续不限高，底部白色安全区继续存在。这样字体或平台尺寸变化时也不会依赖 Web 专用的 8px 猜测值。
+
 **问题描述：** 两个相关问题：
 1. 在有虚拟按键的 Android 设备上，记账页面展开键盘时底部菜单被虚拟按键遮挡
 2. 备注聚焦（键盘收起）时键盘区域下方留有大片空白
@@ -90,8 +92,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 
 #### 第 1 层：`TransactionInputPanel.tsx` 内部
 - 键盘收起状态高度 = **0px**（完全收起，不占位空间）
-- 键盘展开状态高度 = **`222 + insetsBottom`**（精确等于内容总高）
-  - 组成：opRow 38px + numArea 184px + 底部白底 View (insetsBottom) = 222 + insetsBottom
+- 键盘展开状态高度 = **运算符行实测高度 + 数字区实测高度 + `insetsBottom`**（原生平台原始基准约 222px，Web 端实测 265px）
+  - 底部白底 View 高度仍为 `insetsBottom`
   - **无顶部 58px 空白浪费**
 - 数字键盘容器底部添加 `<View style={{ height: insetsBottom || 0, backgroundColor: '#FFFFFF' }} />` 撑高虚拟按键区域为白底
 - `keyboard: { backgroundColor: '#ECECEC', paddingBottom: 0 }` 不要在 keyboard 容器上设 padding
@@ -121,10 +123,10 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   {/* 金额 + 备注 + keyboard */}
 </View>
 
-// 2. keyboard 高度 = 内容精确总高
+// 2. keyboard 高度 = 实测内容总高 + 安全区
 height: keyboardAnim.interpolate({
   inputRange: [0, 1],
-  outputRange: [0, 222 + (insetsBottom || 0)],  // ⚠️ 精确值，222 = 38+184
+  outputRange: [0, opRowHeight + numAreaHeight + (insetsBottom || 0)],
 }),
 
 // 3. keyboard 底部白底 View
@@ -149,9 +151,9 @@ inputPanelWrapper: {
 - ⚠️ 之前版本 - `container.maxHeight = windowHeight * 0.5` + `container.overflow: hidden` 在小屏设备上把 keyboard 底部裁掉
 - ⚠️ 之前版本 - keyboard 高度 280 + insets，顶部多 58px 空白浪费
 - ⚠️ 之前版本 - `inputPanelWrapper` 没有 backgroundColor + `paddingBottom: insets.bottom` 暴露透明区
-- ✅ **最终方案** - 三层防护 + 高度精确 222 + insets：
+- ✅ **当前方案** - 三层防护 + 实测内容高度 + insets：
   1. **container 不限高**，避免被 overflow:hidden 裁切
-  2. **keyboard 高度 222 + insets**，精确等于内容总高，底部白边 = insetsBottom
+  2. **keyboard 高度 = 运算符行 + 数字区实测高度 + insets**，底部白边 = insetsBottom
   3. **inputPanelWrapper 背景白 + 不加 paddingBottom**，覆盖整个虚拟按键区
 
 ---
@@ -378,7 +380,7 @@ src/
 
 | 编号 | 文件 | 锁内容 | 对应 Bug |
 |------|------|--------|----------|
-| Lock-1 | [src/components/TransactionInputPanel.tsx:208-211](src/components/TransactionInputPanel.tsx#L208-L211) | 数字键盘高度必须包含 `insetsBottom` | #3 虚拟按键遮挡记账菜单 |
+| Lock-1 | [src/components/TransactionInputPanel.tsx:208-211](src/components/TransactionInputPanel.tsx#L208-L211) | 数字键盘高度必须包含实测内容高度及 `insetsBottom` | #3 虚拟按键遮挡记账菜单 |
 | Lock-2 | [src/navigation/AppNavigator.tsx](src/navigation/AppNavigator.tsx) | Tab 配置和 `tabBarButton` 实现 | #1 Tab 导航强制跳转明细页 |
 | Lock-3 | [src/db/database.ts:6-34](src/db/database.ts#L6-L34) | 数据库连接有效性检查 | #2 数据库 VFS 状态错误 |
 | Lock-4 | [src/screens/AddTransactionScreen.tsx:30-90](src/screens/AddTransactionScreen.tsx#L30-L90) | 键盘/面板动画值管理 | #7 键盘弹出遮挡输入框 |
