@@ -111,6 +111,13 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
       value TEXT NOT NULL,
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     )`,
+    `CREATE TABLE IF NOT EXISTS asset_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      balance_cents INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )`,
   ];
 
   for (const sql of statements) {

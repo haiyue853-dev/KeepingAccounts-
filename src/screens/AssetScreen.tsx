@@ -1,52 +1,36 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  RefreshControl,
-  TextInput,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, ActivityIndicator, Image, BackHandler } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-
 import { COLORS, SHADOWS, MASCOTS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
-import { SettingsRepo } from '../repositories/SettingsRepo';
-import { TransactionRepo } from '../repositories/TransactionRepo';
-import { showThemedAlert } from '../components/AlertProvider';
+import { getAssetProvider } from '../utils/assetProviders';
+import { sumAssetBalances } from '../utils/assetAmount';
+import type { AssetAccount, AssetAccountInput } from '../models/AssetAccount';
+import { AssetAccountRepo } from '../repositories/AssetAccountRepo';
+import { showThemedAlert, showThemedConfirm } from '../components/AlertProvider';
+import AssetAccountIcon from '../components/AssetAccountIcon';
+import AssetAccountEditor from '../components/AssetAccountEditor';
 
 export default function AssetScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-
-  const [initialBalance, setInitialBalance] = useState<number | null>(null);
-  const [income, setIncome] = useState<number>(0);
-  const [expense, setExpense] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [loadError, setLoadError] = useState<boolean>(false);
-
-  const [editing, setEditing] = useState<boolean>(false);
-  const [inputValue, setInputValue] = useState<string>('');
-  const [saving, setSaving] = useState<boolean>(false);
+  const [accounts, setAccounts] = useState<AssetAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [editing, setEditing] = useState<AssetAccount | null | undefined>(undefined);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const deleteLock = useRef(false);
 
   const load = useCallback(async () => {
     try {
+      const next = await AssetAccountRepo.getAll();
+      setAccounts(next);
       setLoadError(false);
-      const [init, totals] = await Promise.all([
-        SettingsRepo.getInitialBalance(),
-        TransactionRepo.getGlobalTotals(),
-      ]);
-      setInitialBalance(init);
-      setIncome(totals.income);
-      setExpense(totals.expense);
     } catch (e) {
-      console.error('AssetScreen load failed:', e);
+      console.error('Asset accounts load failed:', e);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -54,410 +38,161 @@ export default function AssetScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    if (editing === undefined) return;
+    const listener = BackHandler.addEventListener('hardwareBackPress', () => {
+      setEditing(undefined);
+      return true;
+    });
+    return () => listener.remove();
+  }, [editing]));
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    load();
+  const save = async (input: AssetAccountInput) => {
+    if (editing) await AssetAccountRepo.update(editing.id, input);
+    else await AssetAccountRepo.create(input);
+    setEditing(undefined);
+    await load();
   };
 
-  const remaining = (initialBalance ?? 0) + income - expense;
-  const hasInitial = initialBalance !== null;
-  const isEmpty = !hasInitial && income === 0 && expense === 0;
-
-  const startEdit = () => {
-    setInputValue(hasInitial ? initialBalance!.toFixed(2) : '');
-    setEditing(true);
+  const remove = (account: AssetAccount) => {
+    showThemedConfirm('删除账户', `确定删除「${account.name}」？总资产将移除该账户的余额。`, () => {
+      void (async () => {
+        if (deleteLock.current) return;
+        deleteLock.current = true;
+        setDeleting(account.id);
+        try {
+          await AssetAccountRepo.remove(account.id);
+          await load();
+        } catch (e) {
+          showThemedAlert('删除失败', e instanceof Error ? e.message : '请重试');
+        } finally {
+          deleteLock.current = false;
+          setDeleting(null);
+        }
+      })();
+    }, '删除');
   };
 
-  const cancelEdit = () => {
-    setEditing(false);
-    setInputValue('');
-  };
+  if (editing !== undefined) {
+    return <AssetAccountEditor key={editing?.id ?? 'new'} account={editing} onSave={save}
+      onCancel={() => setEditing(undefined)} insetsBottom={insets.bottom} insetsTop={insets.top} />;
+  }
 
-  const saveEdit = async () => {
-    const trimmed = inputValue.trim();
-    if (trimmed === '' || trimmed === '-' || trimmed === '.') {
-      showThemedAlert('提示', '请输入有效的金额');
-      return;
-    }
-    const num = parseFloat(trimmed);
-    if (!Number.isFinite(num)) {
-      showThemedAlert('提示', '请输入有效的金额');
-      return;
-    }
-    try {
-      setSaving(true);
-      await SettingsRepo.setInitialBalance(num);
-      setEditing(false);
-      setInputValue('');
-      load();
-    } catch (e) {
-      console.error('保存起始余额失败:', e);
-      showThemedAlert('保存失败', '请重试');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const total = sumAssetBalances(accounts) / 100;
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={COLORS.primaryDark}
-            colors={[COLORS.primaryDark]}
-          />
-        }
-      >
-        <View style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 30 + insets.bottom }} refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={COLORS.primaryDark} colors={[COLORS.primaryDark]} />
+      }>
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-              style={styles.backBtn}
-            >
-              <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="返回我的页面" onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={23} color={COLORS.text} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>资产管理</Text>
-            <View style={styles.backBtn} />
+            <View style={styles.backButton} />
           </View>
-
           <View style={styles.balanceBlock}>
             <Image source={MASCOTS.avatar} style={styles.mascot} resizeMode="contain" />
-            <Text style={styles.balanceLabel}>剩余金额</Text>
-            {loading ? (
-              <ActivityIndicator size="large" color={COLORS.text} style={{ marginTop: 16 }} />
-            ) : loadError ? (
-              <Text style={styles.errorText}>加载失败，下拉重试</Text>
-            ) : !hasInitial ? (
-              <Text style={styles.placeholderText}>¥ --</Text>
-            ) : (
-              <Text style={styles.balanceText}>¥{formatAmount(remaining)}</Text>
+            <Text style={styles.balanceLabel}>总资产</Text>
+            {loading ? <ActivityIndicator color={COLORS.text} style={styles.loading} /> : (
+              <Text style={styles.balanceText} numberOfLines={1} adjustsFontSizeToFit>{loadError ? '¥ --' : `¥${formatAmount(total)}`}</Text>
             )}
-            {!loading && !loadError && !hasInitial && (
-              <Text style={styles.hintText}>在下方输入你的起始余额</Text>
-            )}
+            <View style={styles.totalCaption}>
+              <Ionicons name="layers-outline" size={13} color={COLORS.textSecondary} />
+              <Text style={styles.totalCaptionText}>{loadError ? '加载失败，请重试' : `${accounts.length} 个账户 · 当前余额合计`}</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.formulaCard}>
-          {loading ? (
-            <ActivityIndicator size="small" color={COLORS.textSecondary} />
-          ) : loadError ? (
-            <Text style={styles.cardErrorText}>数据加载失败</Text>
-          ) : (
-            <View style={styles.formulaRow}>
-              <FormulaItem label="起始" value={initialBalance} color={COLORS.text} />
-              <FormulaSign op="+" />
-              <FormulaItem label="收入" value={income} color={COLORS.income} />
-              <FormulaSign op="-" />
-              <FormulaItem label="支出" value={expense} color={COLORS.danger} />
-              <FormulaSign op="=" />
-              <FormulaItem
-                label="剩余"
-                value={hasInitial ? remaining : null}
-                color={COLORS.text}
-                highlight
-              />
-            </View>
-          )}
+        <View style={styles.sectionHeading}>
+          <Text style={styles.sectionTitle}>我的账户</Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="添加资产账户" onPress={() => setEditing(null)}
+            disabled={loading || loadError || deleting !== null} style={styles.addSmall}>
+            <Ionicons name="add" size={17} color={COLORS.text} />
+            <Text style={styles.addSmallText}>添加账户</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.editCard}>
-          <Text style={styles.editLabel}>起始余额</Text>
-          {editing ? (
-            <View>
-              <View style={styles.inputRow}>
-                <Text style={styles.currencyMark}>¥</Text>
-                <TextInput
-                  style={styles.input}
-                  value={inputValue}
-                  onChangeText={(t) => {
-                    let s = t.replace(/[^\d.-]/g, '');
-                    const firstMinus = s.indexOf('-');
-                    if (firstMinus > 0) s = s.replace(/-/g, '');
-                    if (firstMinus === 0) s = '-' + s.substring(1).replace(/-/g, '');
-                    const firstDot = s.indexOf('.');
-                    if (firstDot >= 0) {
-                      s = s.substring(0, firstDot + 1) + s.substring(firstDot + 1).replace(/\./g, '');
-                    }
-                    setInputValue(s);
-                  }}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                  placeholderTextColor={COLORS.textLight}
-                  editable={!saving}
-                  autoFocus
-                />
-              </View>
-              <View style={styles.editBtns}>
-                <TouchableOpacity
-                  style={[styles.editBtn, styles.editBtnCancel]}
-                  activeOpacity={0.8}
-                  onPress={cancelEdit}
-                  disabled={saving}
-                >
-                  <Text style={styles.editBtnCancelText}>取消</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.editBtn, styles.editBtnConfirm]}
-                  activeOpacity={0.8}
-                  onPress={saveEdit}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color={COLORS.text} />
-                  ) : (
-                    <Text style={styles.editBtnConfirmText}>保存</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+        {loadError ? (
+          <TouchableOpacity accessibilityRole="button" onPress={() => { setLoading(true); void load(); }} style={styles.emptyCard}>
+            <Ionicons name="refresh-outline" size={30} color={COLORS.textSecondary} />
+            <Text style={styles.emptyTitle}>账户加载失败</Text>
+            <Text style={styles.caption}>点击重试</Text>
+          </TouchableOpacity>
+        ) : !loading && accounts.length === 0 ? (
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="添加第一个账户" onPress={() => setEditing(null)} style={styles.emptyCard}>
+            <View style={styles.emptyIcons}>
+              <AssetAccountIcon provider="cmb" /><AssetAccountIcon provider="wechat" /><AssetAccountIcon provider="alipay" />
             </View>
-          ) : (
-            <View style={styles.viewRow}>
-              <Text style={styles.viewValue}>
-                {hasInitial ? `¥${formatAmount(initialBalance!)}` : '尚未设置'}
-              </Text>
-              <TouchableOpacity
-                style={styles.editLinkBtn}
-                activeOpacity={0.7}
-                onPress={startEdit}
-                disabled={loading}
-              >
-                <Ionicons
-                  name={hasInitial ? 'create-outline' : 'add-circle-outline'}
-                  size={16}
-                  color={COLORS.primaryDark}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.editLinkText}>
-                  {hasInitial ? '修改' : '设置'}
-                </Text>
+            <Text style={styles.emptyTitle}>把分散的钱，放在一起看</Text>
+            <Text style={styles.caption}>添加银行卡、微信或现金，轻松掌握总资产</Text>
+            <View style={styles.emptyAction}><Ionicons name="add" size={18} color={COLORS.text} /><Text style={styles.addSmallText}>添加第一个账户</Text></View>
+          </TouchableOpacity>
+        ) : accounts.map((account) => {
+          const provider = getAssetProvider(account.provider);
+          return (
+            <View key={account.id} style={styles.accountCard}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={`编辑账户 ${account.name}`} style={styles.accountMain}
+                onPress={() => setEditing(account)} disabled={deleting !== null} activeOpacity={0.7}>
+                <AssetAccountIcon provider={account.provider} />
+                <View style={styles.accountInfo}>
+                  <Text style={styles.accountName} numberOfLines={1}>{account.name}</Text>
+                  <Text style={styles.accountType}>{provider.name}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={17} color={COLORS.textLight} />
               </TouchableOpacity>
+              <View style={styles.accountBottom}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`修改${account.name}余额`} onPress={() => setEditing(account)} disabled={deleting !== null} style={styles.balanceButton}>
+                  <Text style={styles.accountBalance} numberOfLines={1} adjustsFontSizeToFit>¥{formatAmount(account.balance_cents / 100)}</Text>
+                  <Text style={styles.tapHint}>点击修改余额</Text>
+                </TouchableOpacity>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={`删除账户 ${account.name}`} disabled={deleting !== null} onPress={() => remove(account)} style={styles.deleteButton}>
+                  {deleting === account.id ? <ActivityIndicator size="small" color={COLORS.textLight} /> : <Ionicons name="trash-outline" size={17} color={COLORS.textLight} />}
+                </TouchableOpacity>
+              </View>
             </View>
-          )}
-        </View>
-
-        {isEmpty && !loading && (
-          <Text style={styles.emptyHint}>
-            你还没有任何交易记录，去记一笔吧～
-          </Text>
-        )}
-
-        <Text style={styles.disclaimer}>
-          起始余额是手动设置的参考值；之后的每一笔收入会增加、支出会减少剩余金额。
-        </Text>
+          );
+        })}
+        {!loading && !loadError && <Text style={styles.disclaimer}>总资产为各账户当前余额之和。记账不会自动改变这里的余额，你可以随时手动更新。</Text>}
       </ScrollView>
     </View>
   );
 }
 
-function FormulaItem({
-  label,
-  value,
-  color,
-  highlight,
-}: {
-  label: string;
-  value: number | null | undefined;
-  color: string;
-  highlight?: boolean;
-}) {
-  return (
-    <View style={[styles.formulaItem, highlight && styles.formulaItemHighlight]}>
-      <Text style={[styles.formulaLabel, { color: COLORS.textSecondary }]}>{label}</Text>
-      <Text
-        style={[
-          styles.formulaValue,
-          { color },
-          highlight && styles.formulaValueHighlight,
-        ]}
-        numberOfLines={1}
-      >
-        {value == null ? '--' : `¥${formatAmount(value)}`}
-      </Text>
-    </View>
-  );
-}
-
-function FormulaSign({ op }: { op: string }) {
-  return <Text style={styles.formulaSign}>{op}</Text>;
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 18,
-    paddingBottom: 26,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  backBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  balanceBlock: { alignItems: 'center', paddingTop: 6, paddingBottom: 4 },
-  mascot: { width: 64, height: 64, marginBottom: 4 },
-  balanceLabel: { fontSize: 13, color: COLORS.text, fontWeight: '700', marginTop: 2 },
-  balanceText: {
-    fontSize: 44,
-    fontWeight: '900',
-    color: COLORS.text,
-    marginTop: 6,
-    letterSpacing: 0.5,
-  },
-  placeholderText: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: COLORS.textLight,
-    marginTop: 6,
-  },
-  hintText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 6,
-    fontWeight: '600',
-  },
-  errorText: { fontSize: 13, color: COLORS.danger, marginTop: 16, fontWeight: '600' },
-
-  formulaCard: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    ...SHADOWS.card,
-  },
-  formulaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-  },
-  formulaItem: {
-    alignItems: 'center',
-    minWidth: 56,
-    paddingHorizontal: 2,
-  },
-  formulaItemHighlight: {
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  formulaLabel: { fontSize: 10, fontWeight: '600', marginBottom: 2 },
-  formulaValue: { fontSize: 13, fontWeight: '800' },
-  formulaValueHighlight: { fontSize: 14 },
-  formulaSign: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.textLight,
-    marginHorizontal: 2,
-  },
-
-  cardErrorText: { color: COLORS.danger, textAlign: 'center', fontSize: 12 },
-
-  editCard: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    ...SHADOWS.card,
-  },
-  editLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  viewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  viewValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  editLinkBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-  },
-  editLinkText: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: '700',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    marginBottom: 12,
-  },
-  currencyMark: { fontSize: 20, fontWeight: '900', color: COLORS.text, marginRight: 6 },
-  input: {
-    flex: 1,
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.text,
-    paddingVertical: 12,
-    // 去掉 web 上点击时的橙色 focus 边框
-    outlineWidth: 0,
-    outlineStyle: 'none',
-  },
-  editBtns: { flexDirection: 'row', justifyContent: 'flex-end' },
-  editBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginLeft: 10,
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editBtnCancel: { backgroundColor: COLORS.background },
-  editBtnCancelText: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '700' },
-  editBtnConfirm: { backgroundColor: COLORS.primary },
-  editBtnConfirmText: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
-
-  emptyHint: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginTop: 16,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-
-  disclaimer: {
-    fontSize: 11,
-    color: COLORS.textLight,
-    textAlign: 'center',
-    marginTop: 22,
-    paddingHorizontal: 28,
-    lineHeight: 16,
-  },
+  header: { backgroundColor: COLORS.primary, paddingHorizontal: 18, paddingBottom: 26, borderBottomLeftRadius: 26, borderBottomRightRadius: 26 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backButton: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  balanceBlock: { alignItems: 'center', paddingTop: 4 },
+  mascot: { width: 60, height: 60, marginBottom: 2 },
+  balanceLabel: { fontSize: 13, color: COLORS.text, fontWeight: '700' },
+  balanceText: { fontSize: 42, fontWeight: '900', color: COLORS.text, marginTop: 7, maxWidth: '100%' },
+  loading: { marginVertical: 20 },
+  totalCaption: { flexDirection: 'row', gap: 5, alignItems: 'center', marginTop: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#FFFFFF55' },
+  totalCaptionText: { fontSize: 11, color: COLORS.textSecondary },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 18, marginTop: 23, marginBottom: 14 },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  addSmall: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: COLORS.primaryLight, gap: 3 },
+  addSmallText: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  accountCard: { marginHorizontal: 16, marginBottom: 12, padding: 16, borderRadius: 20, backgroundColor: COLORS.surface, ...SHADOWS.card },
+  accountMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accountInfo: { flex: 1 },
+  accountName: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  accountType: { fontSize: 11, color: COLORS.textSecondary, marginTop: 5 },
+  accountBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 15, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.divider },
+  balanceButton: { flex: 1 },
+  accountBalance: { fontSize: 25, fontWeight: '800', color: COLORS.text },
+  tapHint: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4 },
+  deleteButton: { width: 42, height: 44, alignItems: 'center', justifyContent: 'center' },
+  emptyCard: { marginHorizontal: 16, paddingHorizontal: 16, paddingVertical: 30, alignItems: 'center', borderRadius: 20, backgroundColor: COLORS.surface, ...SHADOWS.card },
+  emptyIcons: { flexDirection: 'row', gap: 12, marginBottom: 18 },
+  emptyTitle: { fontSize: 17, color: COLORS.text, fontWeight: '800', marginVertical: 10 },
+  caption: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 19 },
+  emptyAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13, marginTop: 22, gap: 5 },
+  disclaimer: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: 12, paddingHorizontal: 30, lineHeight: 18 },
 });
