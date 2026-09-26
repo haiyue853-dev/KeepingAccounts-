@@ -632,7 +632,7 @@ export default function StatisticsScreen() {
                     activeOpacity={isVirtual ? 1 : 0.7}
                   >
                     <View style={styles.rankIconBg}>
-                      <CategoryIcon categoryName={cat.category_name} iconKey={cat.category_icon} size={18} color={COLORS.text} />
+                      <CategoryIcon categoryName={cat.category_name} iconKey={cat.category_icon} size={18} color={COLORS.primaryDark} />
                     </View>
                     <View style={styles.rankContent}>
                       <Text style={styles.rankName} numberOfLines={1}>{cat.category_name}</Text>
@@ -873,7 +873,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.controlSurface,
+    borderWidth: 1,
+    borderColor: COLORS.controlBorder,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
