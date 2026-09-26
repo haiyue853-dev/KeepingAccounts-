@@ -588,7 +588,7 @@ export default function AddTransactionScreen() {
 
       {/* 记账输入面板 — flex 布局底部 item，自然挤压分类网格 */}
       {categoryId && (
-        <Animated.View style={[styles.inputPanelWrapper, { bottom: insets.bottom || 0, transform: [{ translateY: inputPanelAnim }] }]}>
+        <Animated.View style={[styles.inputPanelWrapper, { transform: [{ translateY: inputPanelAnim }] }]}>
           <TransactionInputPanel
             amount={amount}
             onAmountChange={setAmount}

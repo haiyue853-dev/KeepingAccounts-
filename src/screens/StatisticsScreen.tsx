@@ -474,18 +474,17 @@ export default function StatisticsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]} style={[styles.header, { paddingTop: (insets.top || 24) + 8 }]}>
-        <View>
-          <Text style={styles.headerTitle}>图表</Text>
-          <Text style={styles.headerSub}>支出分类占比和趋势</Text>
-        </View>
-        <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.monthPill}>
-          <Text style={styles.monthPillText}>{getTimeLabel()}</Text>
-          <Ionicons name="chevron-down" size={14} color={COLORS.text} />
-        </TouchableOpacity>
-      </LinearGradient>
-
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <LinearGradient colors={[COLORS.headerSurface, '#F4F9FF', COLORS.background]} style={[styles.header, styles.scrollHeader, { paddingTop: (insets.top || 24) + 8 }]}>
+          <View>
+            <Text style={styles.headerTitle}>图表</Text>
+            <Text style={styles.headerSub}>支出分类占比和趋势</Text>
+          </View>
+          <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.monthPill}>
+            <Text style={styles.monthPillText}>{getTimeLabel()}</Text>
+            <Ionicons name="chevron-down" size={14} color={COLORS.text} />
+          </TouchableOpacity>
+        </LinearGradient>
         <View style={styles.summaryCardCompact}>
           <View>
             <Text style={styles.summaryLabelCompact}>
@@ -738,6 +737,7 @@ const styles = StyleSheet.create({
   },
   monthPillText: { fontSize: 12, fontWeight: '600', color: COLORS.text },
   scrollContent: { padding: 16, paddingBottom: 24 },
+  scrollHeader: { marginHorizontal: -16, marginTop: -16, marginBottom: 16 },
   summaryCardCompact: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,

@@ -75,6 +75,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 
 ### 3. 虚拟按键遮挡记账菜单 + 键盘收起空白
 
+**2026-09-26 补充修复原因：** 外层 `inputPanelWrapper` 通过 `bottom: insets.bottom` 上移，而键盘内部已经用等高的安全区 View 留出虚拟按键空间，导致底部安全区重复计算。外层保持 `bottom: 0`，只由内部安全区撑高；键盘实测高度和安全区高度均不变，避免再次裁切按键。
+
 **2026-09-26 补充修复原因：** Web 端实测运算符行 45px、数字区 220px，合计 265px；旧的 `222 + 8` 固定高度只有 230px，`overflow: hidden` 会裁掉最下方数字键。原有的 `insets.bottom` 虚拟按键安全区仍需保留。将键盘展开高度改为两块内容的 `onLayout` 实测高度之和，再加 `insets.bottom`；收起高度继续为 0，容器继续不限高，底部白色安全区继续存在。这样字体或平台尺寸变化时也不会依赖 Web 专用的 8px 猜测值。
 
 **问题描述：** 两个相关问题：
@@ -106,6 +108,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
 #### 第 3 层：`AddTransactionScreen.tsx` 外层
 - `inputPanelWrapper` 必须有 `backgroundColor: '#FFFFFF'`
 - **移除 `paddingBottom: insets.bottom`**（让 wrapper 底边 = 屏幕底边 0，否则会暴露透明 paddingBottom 区域）
+- **不要在调用处覆盖 `bottom: 0` 为 `insets.bottom`**；内部安全区已经占用了这段高度，外层再次上移会重复留白
 - 整个 wrapper 区域都是白底，覆盖 Android 虚拟按键区
 
 **相关文件：**

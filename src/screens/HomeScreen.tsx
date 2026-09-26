@@ -11,7 +11,7 @@ import { TransactionRepo } from '../repositories/TransactionRepo';
 import { TransactionAdjustmentRepo } from '../repositories/TransactionAdjustmentRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { Transaction, TransactionAdjustmentType } from '../models/Transaction';
-import { CATEGORY_ICON_TONES, COLORS, SHADOWS } from '../utils/constants';
+import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 import { CategoryIcon } from '../components/AppIcon';
@@ -413,7 +413,6 @@ export default function HomeScreen() {
           const displayAmount = adjusted ? getTransactionNetAmount(item) : item.amount;
           const adjustmentTotal = getAdjustmentTotal(item);
           const adjustmentNote = item.adjustment_note?.trim();
-          const iconTone = CATEGORY_ICON_TONES[item.type === 'income' ? 1 : index % CATEGORY_ICON_TONES.length];
           return (
             <TouchableOpacity
               style={[
@@ -425,8 +424,8 @@ export default function HomeScreen() {
               onLongPress={() => handleLongPress(item)}
               activeOpacity={0.7}
             >
-              <View style={[styles.txIconBg, { backgroundColor: iconTone.background, borderColor: iconTone.border }]}>
-                <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color={iconTone.color} />
+              <View style={styles.txIconBg}>
+                <CategoryIcon categoryName={item.category_name || ''} iconKey={item.category_icon} size={17} color={COLORS.primaryDark} />
               </View>
               <View style={styles.txInfo}>
                 <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
