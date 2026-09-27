@@ -5,7 +5,7 @@ import {
   Keyboard, Animated, Platform, Dimensions, Vibration,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { showThemedAlert } from '../components/AlertProvider';
+import { showThemedAlert, showThemedConfirm } from '../components/AlertProvider';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TransactionRepo } from '../repositories/TransactionRepo';
@@ -45,6 +45,8 @@ export default function AddTransactionScreen() {
   const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
   const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
   const [selectedAssetAccountId, setSelectedAssetAccountId] = useState<number | null>(null);
+  const [assetAccountsLoaded, setAssetAccountsLoaded] = useState(false);
+  const assetTrackingStarting = useRef(false);
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -52,6 +54,7 @@ export default function AddTransactionScreen() {
       if (!active) return;
       setTrackingStatus(status);
       setAssetAccounts(accounts);
+      setAssetAccountsLoaded(true);
       if (!editId && status) setSelectedAssetAccountId((current) => current ?? accounts[0]?.id ?? null);
     }).catch((error) => console.warn('加载资产账户失败:', error));
     return () => { active = false; };
@@ -393,12 +396,33 @@ export default function AddTransactionScreen() {
   };
 
   const resolveAssetAccountId = async (): Promise<number | null> => {
+    if (assetTrackingStarting.current) throw new Error('正在启用资产自动计算，请稍后保存');
     const status = await AssetAccountRepo.getTrackingStatus();
     if (!status || date < status.startDate || (editId && editId <= status.baselineTransactionId)) return null;
     if (!selectedAssetAccountId || !(await AssetAccountRepo.getAll()).some((account) => account.id === selectedAssetAccountId)) {
       throw new Error('请先选择资产账户');
     }
     return selectedAssetAccountId;
+  };
+
+  const startAssetTracking = (accountId: number) => {
+    if (date < getToday()) {
+      showThemedAlert('日期早于今天', '资产自动计算从启用当天开始。请先把记账日期改为今天。');
+      return;
+    }
+    showThemedConfirm('从今天开始计算',
+      '当前账户余额将作为期初余额。以前的记账不会再扣除，之后选择账户即可自动计算。',
+      () => {
+        if (assetTrackingStarting.current) return;
+        assetTrackingStarting.current = true;
+        void AssetAccountRepo.enableAutoTracking().then(async () => {
+          const status = await AssetAccountRepo.getTrackingStatus();
+          setTrackingStatus(status);
+          setSelectedAssetAccountId(accountId);
+        }).catch((error) => {
+          showThemedAlert('启用失败', error instanceof Error ? error.message : '请重试');
+        }).finally(() => { assetTrackingStarting.current = false; });
+      }, '开始计算');
   };
 
   const saveWithAmount = async (amountStr: string) => {
@@ -566,8 +590,23 @@ export default function AddTransactionScreen() {
         <View style={styles.headerSpacer} />
       </LinearGradient>
 
-      {trackingStatus && date >= trackingStatus.startDate && (!editId || editId > trackingStatus.baselineTransactionId) && (
-        <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId} onSelect={setSelectedAssetAccountId} />
+      {assetAccountsLoaded && assetAccounts.length > 0 &&
+        (trackingStatus ? date >= trackingStatus.startDate && (!editId || editId > trackingStatus.baselineTransactionId) : !editId) && (
+        <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId}
+          onSelect={trackingStatus ? setSelectedAssetAccountId : startAssetTracking}
+          label={trackingStatus ? '账户' : '选择账户'} />
+      )}
+      {!editId && assetAccountsLoaded && assetAccounts.length === 0 && (
+        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Asset')} style={styles.assetSetup}>
+          <Ionicons name="wallet-outline" size={19} color={COLORS.primary} />
+          <Text style={styles.assetSetupText}>添加银行卡或微信账户，开始资产记账</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+        </TouchableOpacity>
+      )}
+      {trackingStatus && (date < trackingStatus.startDate || !!editId && editId <= trackingStatus.baselineTransactionId) && (
+        <View style={styles.assetSetup}>
+          <Text style={styles.assetSetupText}>这笔记录早于资产计算起点，不会计入账户余额</Text>
+        </View>
       )}
 
       {/* 分类网格 — 上方区域，自然填充剩余空间 */}
@@ -669,6 +708,11 @@ export default function AddTransactionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  assetSetup: {
+    minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, backgroundColor: COLORS.surface,
+  },
+  assetSetupText: { flex: 1, fontSize: 12, color: COLORS.primaryDark },
 
   // AppBar
   appBar: {
