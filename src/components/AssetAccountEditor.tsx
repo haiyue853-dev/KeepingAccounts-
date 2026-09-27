@@ -29,6 +29,7 @@ export default function AssetAccountEditor({ account, onSave, onCancel, insetsBo
   const [error, setError] = useState('');
   const saveLock = useRef(false);
   const nameRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const selected = getAssetProvider(provider);
   let preview: string | null = null;
   try { if (amount) preview = formatAmount(evaluateAssetAmount(amount) / 100); } catch { /* Allow unfinished input. */ }
@@ -43,6 +44,7 @@ export default function AssetAccountEditor({ account, onSave, onCancel, insetsBo
     setAmount((previous) => appendAssetKey(previous, key, replaceAmount));
     setReplaceAmount(false);
     setError('');
+    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   };
   const calculate = () => {
     try {
@@ -80,7 +82,7 @@ export default function AssetAccountEditor({ account, onSave, onCancel, insetsBo
           <Text style={styles.headerSave}>{saving ? '保存中' : '完成'}</Text>
         </TouchableOpacity>
       </LinearGradient>
-      <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} style={styles.scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="选择银行或账户类型" disabled={saving}
             onPress={() => { Keyboard.dismiss(); nameRef.current?.blur(); setShowProviders(!showProviders); }} style={styles.providerRow}>

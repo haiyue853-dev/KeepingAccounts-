@@ -199,7 +199,7 @@ export class ImportExportService {
     const file = new File(result.assets[0].uri);
     const arrayBuffer = await file.arrayBuffer();
     const bytes = Array.from(new Uint8Array(arrayBuffer));
-    const fileContent = this.detectAndConvertEncoding(bytes);
+    let fileContent = this.detectAndConvertEncoding(bytes);
 
     if (fileContent.charCodeAt(0) === 0xFEFF) {
       fileContent = fileContent.slice(1);

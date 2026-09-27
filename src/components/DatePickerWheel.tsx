@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
+  ScrollView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../utils/constants';
 
 interface Props {
@@ -30,37 +30,65 @@ function todayStr() {
 }
 function dim(y: number, m: number) { return new Date(y, m, 0).getDate(); }
 
-// 实时生成年份列表：当前年 - 10 到当前年（最新在底部）
-function getYears() {
-  const currentYear = new Date().getFullYear();
-  return Array.from({ length: 11 }, (_, i) => currentYear - 10 + i);
-}
+const ITEM_HEIGHT = 44;
 
 function NumPicker({ label, value, min, max, onChange }: {
   label: string; value: number; min: number; max: number; onChange: (v: number) => void;
 }) {
-  const upDisabled = value <= min;
-  const downDisabled = value >= max;
+  const scrollRef = useRef<ScrollView>(null);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const momentum = useRef(false);
+  const values = Array.from({ length: max - min + 1 }, (_, index) => min + index);
+  const targetOffset = (value - min) * ITEM_HEIGHT;
+
+  const clearSettleTimer = () => {
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = null;
+  };
+
+  const settle = (offset: number) => {
+    clearSettleTimer();
+    const next = Math.min(max, Math.max(min, min + Math.round(offset / ITEM_HEIGHT)));
+    const snappedOffset = (next - min) * ITEM_HEIGHT;
+    if (Math.abs(offset - snappedOffset) > 1) scrollRef.current?.scrollTo({ y: snappedOffset, animated: true });
+    if (next !== value) onChange(next);
+  };
+
+  useEffect(() => {
+    clearSettleTimer();
+    const frame = requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: targetOffset, animated: false }));
+    return () => cancelAnimationFrame(frame);
+  }, [targetOffset, min, max]);
+
+  useEffect(() => () => clearSettleTimer(), []);
+
   return (
     <View style={st.npCol}>
       <Text style={st.npLabel}>{label}</Text>
-      <TouchableOpacity
-        onPress={() => !upDisabled && onChange(value > min ? value - 1 : max)}
-        style={[st.arrowBtn, upDisabled && st.arrowBtnDisabled]}
-        disabled={upDisabled}
-      >
-        <Ionicons name="chevron-up" size={24} color={upDisabled ? COLORS.textLight : COLORS.text} />
-      </TouchableOpacity>
-      <View style={st.npValue}>
-        <Text style={st.npValueText}>{value}</Text>
+      <View style={st.wheelFrame}>
+        <View pointerEvents="none" style={st.npValue} />
+        <ScrollView ref={scrollRef} style={st.wheel} contentContainerStyle={st.wheelContent}
+          showsVerticalScrollIndicator={false} snapToInterval={ITEM_HEIGHT} decelerationRate="fast"
+          nestedScrollEnabled scrollEventThrottle={16}
+          onContentSizeChange={() => scrollRef.current?.scrollTo({ y: targetOffset, animated: false })}
+          onScroll={(event) => {
+            if (momentum.current) return;
+            clearSettleTimer();
+            const offset = event.nativeEvent.contentOffset.y;
+            settleTimer.current = setTimeout(() => settle(offset), 130);
+          }}
+          onMomentumScrollBegin={() => { momentum.current = true; clearSettleTimer(); }}
+          onMomentumScrollEnd={(event) => { momentum.current = false; settle(event.nativeEvent.contentOffset.y); }}>
+          {values.map((item) => (
+            <TouchableOpacity key={item} style={st.wheelItem} onPress={() => {
+              scrollRef.current?.scrollTo({ y: (item - min) * ITEM_HEIGHT, animated: true });
+              onChange(item);
+            }}>
+              <Text style={[st.wheelText, item === value && st.npValueText]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
-      <TouchableOpacity
-        onPress={() => !downDisabled && onChange(value < max ? value + 1 : min)}
-        style={[st.arrowBtn, downDisabled && st.arrowBtnDisabled]}
-        disabled={downDisabled}
-      >
-        <Ionicons name="chevron-down" size={24} color={downDisabled ? COLORS.textLight : COLORS.text} />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -99,7 +127,6 @@ export default function DatePickerWheel({ visible, date, onConfirm, onCancel, mo
 
   // 月份变化时修正日期
   const maxDay = dim(year, month);
-  const safeDay = Math.min(day, maxDay);
   useEffect(() => {
     if (day > maxDay) setDay(maxDay);
   }, [year, month]);
@@ -127,6 +154,7 @@ export default function DatePickerWheel({ visible, date, onConfirm, onCancel, mo
     }
     return monthLastDay;
   })();
+  const safeDay = Math.min(day, dayMax);
 
   // 限制 state 不能超过 max
   useEffect(() => {
@@ -140,7 +168,12 @@ export default function DatePickerWheel({ visible, date, onConfirm, onCancel, mo
   }, [day, dayMax]);
 
   const handleConfirm = () => {
-    onConfirm(fmt(year, month, monthOnly ? 1 : safeDay));
+    const confirmedYear = Math.min(yearMax, Math.max(yearMin, year));
+    const confirmedMonth = Math.min(month, confirmedYear === currentYear ? currentMonth : 12);
+    const lastDay = dim(confirmedYear, confirmedMonth);
+    const confirmedDay = Math.min(day, lastDay,
+      confirmedYear === currentYear && confirmedMonth === currentMonth ? currentDay : lastDay);
+    onConfirm(fmt(confirmedYear, confirmedMonth, monthOnly ? 1 : confirmedDay));
   };
 
   const goToday = () => {
@@ -210,16 +243,20 @@ const st = StyleSheet.create({
   },
   npCol: { alignItems: 'center', width: 80 },
   npLabel: { fontSize: 13, color: COLORS.textLight, marginBottom: 8 },
-  arrowBtn: { padding: 8 },
-  arrowBtnDisabled: { opacity: 0.3 },
+  wheelFrame: { width: 72, height: ITEM_HEIGHT * 3, overflow: 'hidden' },
+  wheel: { flex: 1 },
+  wheelContent: { paddingVertical: ITEM_HEIGHT },
+  wheelItem: { height: ITEM_HEIGHT, alignItems: 'center', justifyContent: 'center' },
+  wheelText: { fontSize: 17, color: COLORS.textLight },
   npValue: {
-    width: 64,
-    height: 44,
+    position: 'absolute',
+    top: ITEM_HEIGHT,
+    width: 72,
+    height: ITEM_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
     borderRadius: 8,
-    marginVertical: 4,
   },
   npValueText: { fontSize: 20, fontWeight: '600', color: COLORS.text },
 });

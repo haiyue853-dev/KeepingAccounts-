@@ -581,10 +581,10 @@ export default function StatisticsScreen() {
                 },
               }}
               bezier
-              style={[
+              style={StyleSheet.flatten([
                 styles.chart,
                 { paddingRight: 32, marginRight: 0, paddingLeft: 0, marginLeft: 8 },
-              ]}
+              ])}
               fromZero
             />
           ) : (
@@ -609,7 +609,7 @@ export default function StatisticsScreen() {
                 const isVirtual = cat.category_id < 0;
                 const handlePress = () => {
                   if (rangeSummary && !isVirtual) {
-                    navigation.navigate('CategoryDetail' as never, {
+                    (navigation as any).navigate('CategoryDetail', {
                       categoryData: {
                         id: cat.category_id,
                         name: cat.category_name,
@@ -620,7 +620,7 @@ export default function StatisticsScreen() {
                         startDate: rangeSummary.startDate,
                         endDate: rangeSummary.endDate,
                       },
-                    } as never);
+                    });
                   }
                 };
                 return (

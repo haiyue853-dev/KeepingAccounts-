@@ -8,9 +8,9 @@ export class TransactionAdjustmentRepo {
   static async create(data: TransactionAdjustmentCreate): Promise<number> {
     const db = await getDatabase();
     const result = await db.runAsync(
-      `INSERT INTO cashback_records (transaction_id, type, amount, date, note, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, datetime('now','localtime'), datetime('now','localtime'))`,
-      [data.transaction_id, data.type, data.amount, data.date, data.note ?? '']
+      `INSERT INTO cashback_records (transaction_id, type, amount, date, note, asset_account_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now','localtime'), datetime('now','localtime'))`,
+      [data.transaction_id, data.type, data.amount, data.date, data.note ?? '', data.asset_account_id ?? null]
     );
     return result.lastInsertRowId;
   }
@@ -37,9 +37,9 @@ export class TransactionAdjustmentRepo {
     const db = await getDatabase();
     await db.runAsync(
       `UPDATE cashback_records
-       SET type = ?, amount = ?, date = ?, note = ?, updated_at = datetime('now','localtime')
+       SET type = ?, amount = ?, date = ?, note = ?, asset_account_id = ?, updated_at = datetime('now','localtime')
        WHERE id = ?`,
-      [data.type, data.amount, data.date, data.note ?? '', current.id]
+      [data.type, data.amount, data.date, data.note ?? '', data.asset_account_id ?? null, current.id]
     );
     await db.runAsync(
       'DELETE FROM cashback_records WHERE transaction_id = ? AND id <> ?',

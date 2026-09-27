@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SpeechToTextFactory } from '../services/speech/SpeechToTextFactory';
 import VoiceButton from '../components/VoiceButton';
 import { TransactionRepo } from '../repositories/TransactionRepo';
@@ -10,6 +10,9 @@ import { COLORS } from '../utils/constants';
 import { Ionicons } from '@expo/vector-icons';
 import { getToday } from '../utils/formatters';
 import { resolveTransactionDate } from '../utils/dateParser';
+import { AssetAccountRepo, AssetTrackingStatus } from '../repositories/AssetAccountRepo';
+import type { AssetAccount } from '../models/AssetAccount';
+import AssetAccountPicker from '../components/AssetAccountPicker';
 
 export default function VoiceInputScreen() {
   const navigation = useNavigation<any>();
@@ -22,6 +25,20 @@ export default function VoiceInputScreen() {
     note: string;
     date: string;
   } | null>(null);
+  const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
+  const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
+  const [selectedAssetAccountId, setSelectedAssetAccountId] = useState<number | null>(null);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void Promise.all([AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getAll()]).then(([status, accounts]) => {
+      if (!active) return;
+      setTrackingStatus(status);
+      setAssetAccounts(accounts);
+      if (status) setSelectedAssetAccountId((current) => current ?? accounts[0]?.id ?? null);
+    }).catch((error) => console.warn('加载资产账户失败:', error));
+    return () => { active = false; };
+  }, []));
 
   const handleStart = async () => {
     try {
@@ -123,6 +140,13 @@ export default function VoiceInputScreen() {
         return;
       }
 
+      const status = await AssetAccountRepo.getTrackingStatus();
+      const tracked = !!status && parsedResult.date >= status.startDate;
+      if (tracked && (!selectedAssetAccountId || !(await AssetAccountRepo.getAll()).some((account) => account.id === selectedAssetAccountId))) {
+        Alert.alert('提示', '请先选择资产账户');
+        return;
+      }
+
       await TransactionRepo.create({
         book_id: bookId,
         category_id: categoryId,
@@ -130,6 +154,7 @@ export default function VoiceInputScreen() {
         type: parsedResult.type,
         note: parsedResult.note,
         date: parsedResult.date || getToday(),
+        asset_account_id: tracked ? selectedAssetAccountId : null,
       });
 
       Alert.alert('成功', '记录已保存', [
@@ -190,6 +215,10 @@ export default function VoiceInputScreen() {
             <Text style={styles.parsedLabel}>日期</Text>
             <Text style={styles.parsedValue}>{parsedResult.date}</Text>
           </View>
+
+          {trackingStatus && parsedResult.date >= trackingStatus.startDate && (
+            <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId} onSelect={setSelectedAssetAccountId} />
+          )}
 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
             <Text style={styles.saveText}>保存记录</Text>

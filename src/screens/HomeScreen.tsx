@@ -16,6 +16,9 @@ import { formatAmount } from '../utils/formatters';
 import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 import { CategoryIcon } from '../components/AppIcon';
 import { showThemedConfirm } from '../components/AlertProvider';
+import { AssetAccountRepo } from '../repositories/AssetAccountRepo';
+import type { AssetAccount } from '../models/AssetAccount';
+import AssetAccountPicker from '../components/AssetAccountPicker';
 
 interface DayGroup {
   date: string;
@@ -72,6 +75,9 @@ export default function HomeScreen() {
   const [adjustmentError, setAdjustmentError] = useState('');
   const [editingAdjustment, setEditingAdjustment] = useState(false);
   const [savingAdjustment, setSavingAdjustment] = useState(false);
+  const [adjustmentAccounts, setAdjustmentAccounts] = useState<AssetAccount[]>([]);
+  const [adjustmentAccountId, setAdjustmentAccountId] = useState<number | null>(null);
+  const [adjustmentTrackingStart, setAdjustmentTrackingStart] = useState<string | null>(null);
   const [summaryHidden, setSummaryHidden] = useState(false);
   const monthListRef = useRef<ScrollView>(null);
   // 记住明细列表的滚动位置（编辑/删除后恢复）
@@ -230,6 +236,11 @@ export default function HomeScreen() {
     setShowAction(false);
 
     try {
+      const [status, accounts] = await Promise.all([AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getAll()]);
+      const tracked = !!status && tx.id > status.baselineTransactionId && tx.date >= status.startDate && !!tx.asset_account_id;
+      setAdjustmentTrackingStart(tracked ? status.startDate : null);
+      setAdjustmentAccounts(tracked ? accounts : []);
+      setAdjustmentAccountId(tracked ? tx.asset_account_id ?? null : null);
       const existing = await TransactionAdjustmentRepo.getByTransactionId(tx.id);
       const current = existing[0];
       if (current) {
@@ -238,6 +249,7 @@ export default function HomeScreen() {
         setAdjustmentAmount(String(current.amount));
         setAdjustmentDate(current.date || tx.date);
         setAdjustmentNote(current.note || '');
+        if (tracked) setAdjustmentAccountId(current.asset_account_id ?? tx.asset_account_id ?? null);
       }
     } catch (e) {
       console.error('读取返现/报销失败', e);
@@ -261,6 +273,11 @@ export default function HomeScreen() {
       Alert.alert('日期格式不正确', '日期请填写为 YYYY-MM-DD');
       return;
     }
+    if (adjustmentTrackingStart && adjustmentDate >= adjustmentTrackingStart &&
+      (!adjustmentAccountId || !adjustmentAccounts.some((account) => account.id === adjustmentAccountId))) {
+      setAdjustmentError('请选择到账账户');
+      return;
+    }
 
     try {
       setSavingAdjustment(true);
@@ -271,6 +288,7 @@ export default function HomeScreen() {
         amount,
         date: adjustmentDate,
         note: adjustmentNote.trim(),
+        asset_account_id: adjustmentTrackingStart ? adjustmentAccountId : null,
       });
       setShowAdjustment(false);
       setSelectedTx(null);
@@ -574,6 +592,10 @@ export default function HomeScreen() {
               returnKeyType="done"
               onSubmitEditing={handleSaveAdjustment}
             />
+
+            {adjustmentTrackingStart && adjustmentDate >= adjustmentTrackingStart && (
+              <AssetAccountPicker accounts={adjustmentAccounts} selectedId={adjustmentAccountId} onSelect={setAdjustmentAccountId} label="到账" />
+            )}
 
             {adjustmentError ? <Text style={styles.adjustmentError}>{adjustmentError}</Text> : null}
 

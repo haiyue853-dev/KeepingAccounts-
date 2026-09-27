@@ -66,6 +66,7 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
       type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
       note TEXT,
       date TEXT NOT NULL,
+      asset_account_id INTEGER,
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (book_id) REFERENCES account_books(id) ON DELETE CASCADE,
@@ -116,7 +117,17 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
       name TEXT NOT NULL,
       provider TEXT NOT NULL,
       balance_cents INTEGER NOT NULL DEFAULT 0,
+      opening_balance_cents INTEGER NOT NULL DEFAULT 0,
+      adjustment_cents INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT DEFAULT (datetime('now','localtime'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS asset_balance_adjustments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL,
+      delta_cents INTEGER NOT NULL,
+      balance_cents INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (account_id) REFERENCES asset_accounts(id) ON DELETE CASCADE
     )`,
   ];
 
@@ -125,6 +136,7 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
   }
 
   await ensureCashbackRecordsSchema(database);
+  await ensureAssetTrackingSchema(database);
 
   // Insert default data if empty
   const bookCount = await database.getFirstAsync<{ count: number }>(
@@ -133,6 +145,21 @@ async function initDatabase(database: SQLite.SQLiteDatabase): Promise<void> {
   if (bookCount && bookCount.count === 0) {
     await insertDefaultData(database);
   }
+}
+
+async function ensureAssetTrackingSchema(database: SQLite.SQLiteDatabase): Promise<void> {
+  const transactionColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(transactions)');
+  if (!transactionColumns.some((column) => column.name === 'asset_account_id')) {
+    await database.runAsync('ALTER TABLE transactions ADD COLUMN asset_account_id INTEGER');
+  }
+  const accountColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(asset_accounts)');
+  if (!accountColumns.some((column) => column.name === 'opening_balance_cents')) {
+    await database.runAsync('ALTER TABLE asset_accounts ADD COLUMN opening_balance_cents INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!accountColumns.some((column) => column.name === 'adjustment_cents')) {
+    await database.runAsync('ALTER TABLE asset_accounts ADD COLUMN adjustment_cents INTEGER NOT NULL DEFAULT 0');
+  }
+  await database.runAsync('CREATE INDEX IF NOT EXISTS idx_transactions_asset_account ON transactions(asset_account_id)');
 }
 
 async function ensureCashbackRecordsSchema(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -146,6 +173,7 @@ async function ensureCashbackRecordsSchema(database: SQLite.SQLiteDatabase): Pro
     { name: 'note', sql: 'ALTER TABLE cashback_records ADD COLUMN note TEXT' },
     { name: 'created_at', sql: 'ALTER TABLE cashback_records ADD COLUMN created_at TEXT' },
     { name: 'updated_at', sql: 'ALTER TABLE cashback_records ADD COLUMN updated_at TEXT' },
+    { name: 'asset_account_id', sql: 'ALTER TABLE cashback_records ADD COLUMN asset_account_id INTEGER' },
   ];
 
   for (const migration of migrations) {

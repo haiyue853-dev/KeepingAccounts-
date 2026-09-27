@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showThemedAlert } from '../components/AlertProvider';
 import { COLORS, SHADOWS } from '../utils/constants';
 
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 const AVATAR_STORAGE_KEY = 'profile.avatarUri';
 
 function compressWebAvatar(source: string): Promise<string> {

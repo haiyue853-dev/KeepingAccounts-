@@ -8,6 +8,7 @@ export interface Transaction {
   type: TransactionType;
   note: string;
   date: string; // YYYY-MM-DD
+  asset_account_id?: number | null;
   created_at: string;
   updated_at: string;
   adjustment_total?: number;
@@ -26,6 +27,7 @@ export interface TransactionCreate {
   type: TransactionType;
   note?: string;
   date: string;
+  asset_account_id?: number | null;
 }
 
 export interface TransactionFilter {
@@ -44,6 +46,7 @@ export interface TransactionAdjustment {
   type: TransactionAdjustmentType;
   amount: number;
   date: string;
+  asset_account_id?: number | null;
   note: string;
   created_at: string;
   updated_at: string;
@@ -54,5 +57,6 @@ export interface TransactionAdjustmentCreate {
   type: TransactionAdjustmentType;
   amount: number;
   date: string;
+  asset_account_id?: number | null;
   note?: string;
 }

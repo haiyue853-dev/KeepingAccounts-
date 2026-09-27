@@ -9,7 +9,7 @@ import { formatAmount } from '../utils/formatters';
 import { getAssetProvider } from '../utils/assetProviders';
 import { sumAssetBalances } from '../utils/assetAmount';
 import type { AssetAccount, AssetAccountInput } from '../models/AssetAccount';
-import { AssetAccountRepo } from '../repositories/AssetAccountRepo';
+import { AssetAccountRepo, AssetTrackingStatus } from '../repositories/AssetAccountRepo';
 import { showThemedAlert, showThemedConfirm } from '../components/AlertProvider';
 import AssetAccountIcon from '../components/AssetAccountIcon';
 import AssetAccountEditor from '../components/AssetAccountEditor';
@@ -23,12 +23,18 @@ export default function AssetScreen() {
   const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState<AssetAccount | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
+  const [periodTotals, setPeriodTotals] = useState({ income_cents: 0, expense_cents: 0 });
   const deleteLock = useRef(false);
 
   const load = useCallback(async () => {
     try {
-      const next = await AssetAccountRepo.getAll();
+      const [next, status, totals] = await Promise.all([
+        AssetAccountRepo.getAll(), AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getPeriodTotals(),
+      ]);
       setAccounts(next);
+      setTrackingStatus(status);
+      setPeriodTotals(totals);
       setLoadError(false);
     } catch (e) {
       console.error('Asset accounts load failed:', e);
@@ -75,6 +81,14 @@ export default function AssetScreen() {
     }, '删除');
   };
 
+  const enableTracking = () => {
+    showThemedConfirm('从今天开始计算', '当前账户余额将作为期初余额。以前的记账不会再扣除，之后记账时选择账户即可自动计算。', () => {
+      void AssetAccountRepo.enableAutoTracking().then(load).catch((error) => {
+        showThemedAlert('启用失败', error instanceof Error ? error.message : '请重试');
+      });
+    }, '开始计算');
+  };
+
   if (editing !== undefined) {
     return <AssetAccountEditor key={editing?.id ?? 'new'} account={editing} onSave={save}
       onCancel={() => setEditing(undefined)} insetsBottom={insets.bottom} insetsTop={insets.top} />;
@@ -106,6 +120,24 @@ export default function AssetScreen() {
             </View>
           </View>
         </LinearGradient>
+
+        {!loading && !loadError && trackingStatus && (
+          <View style={styles.trackingCard}>
+            <Text style={styles.trackingDate}>从 {trackingStatus.startDate} 开始</Text>
+            <View style={styles.trackingTotals}>
+              <Text style={styles.trackingIncome}>收入 +¥{formatAmount(periodTotals.income_cents / 100)}</Text>
+              <Text style={styles.trackingExpense}>支出 -¥{formatAmount(periodTotals.expense_cents / 100)}</Text>
+            </View>
+          </View>
+        )}
+        {!loading && !loadError && !trackingStatus && accounts.length > 0 && (
+          <View style={styles.trackingCard}>
+            <Text style={styles.trackingIntro}>确认各账户现在的余额后，即可从今天开始自动计算。</Text>
+            <TouchableOpacity accessibilityRole="button" onPress={enableTracking} style={styles.trackingButton}>
+              <Text style={styles.trackingButtonText}>从今天开始计算</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.sectionHeading}>
           <Text style={styles.sectionTitle}>我的账户</Text>
@@ -156,7 +188,7 @@ export default function AssetScreen() {
             </View>
           );
         })}
-        {!loading && !loadError && <Text style={styles.disclaimer}>总资产为各账户当前余额之和。记账不会自动改变这里的余额，你可以随时手动更新。</Text>}
+        {!loading && !loadError && <Text style={styles.disclaimer}>{trackingStatus ? '总资产为各账户期初余额加上启用后的收支；修改余额会记为一次校正。' : '总资产为各账户当前余额之和。开始自动计算前，可以先核对余额。'}</Text>}
       </ScrollView>
     </View>
   );
@@ -195,4 +227,12 @@ const styles = StyleSheet.create({
   caption: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 19 },
   emptyAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.controlSurface, borderWidth: 1, borderColor: COLORS.controlBorder, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13, marginTop: 22, gap: 5 },
   disclaimer: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: 12, paddingHorizontal: 30, lineHeight: 18 },
+  trackingCard: { marginHorizontal: 16, marginTop: 14, padding: 15, borderRadius: 17, backgroundColor: COLORS.surface, ...SHADOWS.card },
+  trackingDate: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10 },
+  trackingTotals: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  trackingIncome: { fontSize: 14, color: COLORS.income, fontWeight: '600' },
+  trackingExpense: { fontSize: 14, color: COLORS.expense, fontWeight: '600' },
+  trackingIntro: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
+  trackingButton: { alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: COLORS.primaryLight },
+  trackingButtonText: { fontSize: 13, color: COLORS.primaryDark, fontWeight: '600' },
 });

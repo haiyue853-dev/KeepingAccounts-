@@ -1,21 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ImportExportService } from '../services/ImportExportService';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { COLORS } from '../utils/constants';
 import { showThemedAlert } from '../components/AlertProvider';
+import { AssetAccountRepo } from '../repositories/AssetAccountRepo';
+import type { AssetAccount } from '../models/AssetAccount';
+import AssetAccountPicker from '../components/AssetAccountPicker';
+import { getDatabase } from '../db/database';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ImportExportScreen() {
   const [bookId, setBookId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
+  const [trackingStartDate, setTrackingStartDate] = useState<string | null>(null);
+  const [selectedAssetAccountId, setSelectedAssetAccountId] = useState<number | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const books = await AccountBookRepo.getAll();
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void (async () => {
+      const [books, status, accounts] = await Promise.all([
+        AccountBookRepo.getAll(), AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getAll(),
+      ]);
+      if (!active) return;
       if (books.length > 0) setBookId(books[0].id);
-    })();
-  }, []);
+      setTrackingStartDate(status?.startDate ?? null);
+      setAssetAccounts(accounts);
+      setSelectedAssetAccountId((current) => accounts.some((account) => account.id === current) ? current : accounts[0]?.id ?? null);
+    })().catch((error) => console.warn('加载导入账户失败:', error));
+    return () => { active = false; };
+  }, []));
 
   const wrap = async (fn: () => Promise<void>) => {
     if (!bookId) return;
@@ -23,6 +39,21 @@ export default function ImportExportScreen() {
     try { await fn(); }
     catch (e: any) { showThemedAlert('操作失败', e.message); }
     finally { setLoading(false); }
+  };
+
+  const importIntoAccount = async (importFile: () => Promise<{ imported: number; skipped: number }>) => {
+    const status = await AssetAccountRepo.getTrackingStatus();
+    if (status && (!selectedAssetAccountId || !(await AssetAccountRepo.getAll()).some((account) => account.id === selectedAssetAccountId))) {
+      throw new Error('请先选择导入记录对应的资产账户');
+    }
+    const db = await getDatabase();
+    const before = await db.getFirstAsync<{ id: number }>('SELECT COALESCE(MAX(id), 0) AS id FROM transactions');
+    const result = await importFile();
+    if (status && selectedAssetAccountId) {
+      await db.runAsync('UPDATE transactions SET asset_account_id = ? WHERE id > ? AND date >= ?',
+        [selectedAssetAccountId, before?.id ?? 0, status.startDate]);
+    }
+    showThemedAlert('导入完成', `成功导入 ${result.imported} 条，跳过 ${result.skipped} 条`);
   };
 
   return (
@@ -57,17 +88,18 @@ export default function ImportExportScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>导入账本</Text>
         <Text style={styles.desc}>从 JSON 或 CSV 文件导入记录</Text>
+        {trackingStartDate && (
+          <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId} onSelect={setSelectedAssetAccountId} label="导入到" />
+        )}
         <View style={styles.buttonRow}>
           <TouchableOpacity style={styles.importBtn} onPress={() => wrap(async () => {
-            const result = await ImportExportService.importFromJson(bookId!);
-            showThemedAlert('导入完成', `成功导入 ${result.imported} 条，跳过 ${result.skipped} 条`);
+            await importIntoAccount(() => ImportExportService.importFromJson(bookId!));
           })}>
             <Ionicons name="folder-open-outline" size={20} color="#fff" />
             <Text style={styles.btnText}>导入 JSON</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.importBtn} onPress={() => wrap(async () => {
-            const result = await ImportExportService.importFromCsv(bookId!);
-            showThemedAlert('导入完成', `成功导入 ${result.imported} 条，跳过 ${result.skipped} 条`);
+            await importIntoAccount(() => ImportExportService.importFromCsv(bookId!));
           })}>
             <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
             <Text style={styles.btnText}>导入 CSV</Text>

@@ -16,6 +16,9 @@ import { AccountBookRepo } from '../repositories/AccountBookRepo';
 import { getToday } from '../utils/formatters';
 import { resolveTransactionDate } from '../utils/dateParser';
 import { showThemedAlert } from '../components/AlertProvider';
+import { AssetAccountRepo, AssetTrackingStatus } from '../repositories/AssetAccountRepo';
+import type { AssetAccount } from '../models/AssetAccount';
+import AssetAccountPicker from '../components/AssetAccountPicker';
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
@@ -25,10 +28,18 @@ export default function DiscoverScreen() {
   const [parsedResults, setParsedResults] = useState<ParsedTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
+  const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
+  const [selectedAssetAccountId, setSelectedAssetAccountId] = useState<number | null>(null);
 
   useFocusEffect(
     React.useCallback(() => {
       DeepSeekConfig.isConfigured().then(setIsConfigured);
+      void Promise.all([AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getAll()]).then(([status, accounts]) => {
+        setTrackingStatus(status);
+        setAssetAccounts(accounts);
+        if (status) setSelectedAssetAccountId((current) => current ?? accounts[0]?.id ?? null);
+      }).catch((error) => console.warn('加载资产账户失败:', error));
     }, [])
   );
 
@@ -59,6 +70,12 @@ export default function DiscoverScreen() {
       const books = await AccountBookRepo.getAll();
       if (books.length === 0) { showThemedAlert('提示', '没有找到账本'); return; }
       const bookId = books[0].id;
+      const status = await AssetAccountRepo.getTrackingStatus();
+      if (status && parsedResults.some((item) => resolveTransactionDate(inputText, item.date) >= status.startDate)
+        && (!selectedAssetAccountId || !(await AssetAccountRepo.getAll()).some((account) => account.id === selectedAssetAccountId))) {
+        showThemedAlert('提示', '请先选择资产账户');
+        return;
+      }
 
       let saved = 0;
       for (const item of parsedResults) {
@@ -77,6 +94,7 @@ export default function DiscoverScreen() {
           type: item.type,
           note: item.note,
           date: resolveTransactionDate(inputText, item.date),
+          asset_account_id: status && resolveTransactionDate(inputText, item.date) >= status.startDate ? selectedAssetAccountId : null,
         });
         saved++;
       }
@@ -157,6 +175,9 @@ export default function DiscoverScreen() {
         {parsedResults.length > 0 ? (
           <View style={styles.resultCard}>
             <Text style={styles.resultTitle}>解析结果</Text>
+            {trackingStatus && parsedResults.some((item) => resolveTransactionDate(inputText, item.date) >= trackingStatus.startDate) && (
+              <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId} onSelect={setSelectedAssetAccountId} />
+            )}
             {parsedResults.map((item, i) => (
               <View key={`${item.note}-${i}`} style={styles.resultItem}>
                 <View style={styles.resultIcon}>

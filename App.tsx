@@ -7,6 +7,11 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { AlertProvider } from './src/components/AlertProvider';
 import { COLORS } from './src/utils/constants';
 import { getDatabase, resetDatabase } from './src/db/database';
+import * as SplashScreen from 'expo-splash-screen';
+
+if (Platform.OS !== 'web') {
+  void SplashScreen.preventAutoHideAsync();
+}
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -80,6 +85,10 @@ export default function App() {
     initApp();
   }, []);
 
+  useEffect(() => {
+    if (initError && Platform.OS !== 'web') void SplashScreen.hideAsync();
+  }, [initError]);
+
   const handleRetry = async () => {
     await resetDatabase();
     await initApp();
@@ -105,7 +114,11 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <AlertProvider>
-          <NavigationContainer>
+          <NavigationContainer onReady={() => {
+            if (Platform.OS !== 'web') {
+              requestAnimationFrame(() => { void SplashScreen.hideAsync(); });
+            }
+          }}>
             <StatusBar style="dark" />
             <AppNavigator />
           </NavigationContainer>

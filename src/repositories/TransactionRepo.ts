@@ -139,8 +139,8 @@ export class TransactionRepo {
   static async create(data: TransactionCreate): Promise<number> {
     const db = await getDatabase();
     const result = await db.runAsync(
-      'INSERT INTO transactions (book_id, category_id, amount, type, note, date) VALUES (?, ?, ?, ?, ?, ?)',
-      [data.book_id, data.category_id, data.amount, data.type, data.note ?? '', data.date]
+      'INSERT INTO transactions (book_id, category_id, amount, type, note, date, asset_account_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [data.book_id, data.category_id, data.amount, data.type, data.note ?? '', data.date, data.asset_account_id ?? null]
     );
     return result.lastInsertRowId;
   }
@@ -155,6 +155,7 @@ export class TransactionRepo {
     if (data.type !== undefined) { fields.push('type = ?'); values.push(data.type); }
     if (data.note !== undefined) { fields.push('note = ?'); values.push(data.note); }
     if (data.date !== undefined) { fields.push('date = ?'); values.push(data.date); }
+    if (data.asset_account_id !== undefined) { fields.push('asset_account_id = ?'); values.push(data.asset_account_id); }
     values.push(id);
     await db.runAsync(`UPDATE transactions SET ${fields.join(', ')} WHERE id = ?`, values);
   }

@@ -17,6 +17,9 @@ import { getToday } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
 import DatePickerWheel from '../components/DatePickerWheel';
 import TransactionInputPanel from '../components/TransactionInputPanel';
+import AssetAccountPicker from '../components/AssetAccountPicker';
+import { AssetAccountRepo, AssetTrackingStatus } from '../repositories/AssetAccountRepo';
+import type { AssetAccount } from '../models/AssetAccount';
 
 type CalcToken = number | '+' | '-' | '×' | '÷';
 
@@ -39,6 +42,20 @@ export default function AddTransactionScreen() {
   const [noteFocused, setNoteFocused] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [showTagPanel, setShowTagPanel] = useState(false);
+  const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
+  const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
+  const [selectedAssetAccountId, setSelectedAssetAccountId] = useState<number | null>(null);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void Promise.all([AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getAll()]).then(([status, accounts]) => {
+      if (!active) return;
+      setTrackingStatus(status);
+      setAssetAccounts(accounts);
+      if (!editId && status) setSelectedAssetAccountId((current) => current ?? accounts[0]?.id ?? null);
+    }).catch((error) => console.warn('加载资产账户失败:', error));
+    return () => { active = false; };
+  }, [editId]));
 
   const insets = useSafeAreaInsets();
   const windowHeight = Dimensions.get('window').height;
@@ -150,6 +167,7 @@ export default function AddTransactionScreen() {
           setNote(t.note || '');
           setDate(t.date);
           setCategoryId(t.category_id);
+          setSelectedAssetAccountId(t.asset_account_id ?? null);
           // 先设置 type，等下一个渲染周期再加载分类
           setTransactionLoaded(true);
         }
@@ -374,6 +392,15 @@ export default function AddTransactionScreen() {
     }
   };
 
+  const resolveAssetAccountId = async (): Promise<number | null> => {
+    const status = await AssetAccountRepo.getTrackingStatus();
+    if (!status || date < status.startDate || (editId && editId <= status.baselineTransactionId)) return null;
+    if (!selectedAssetAccountId || !(await AssetAccountRepo.getAll()).some((account) => account.id === selectedAssetAccountId)) {
+      throw new Error('请先选择资产账户');
+    }
+    return selectedAssetAccountId;
+  };
+
   const saveWithAmount = async (amountStr: string) => {
     try {
       const num = parseFloat(amountStr);
@@ -395,12 +422,13 @@ export default function AddTransactionScreen() {
       }
       const books = await AccountBookRepo.getAll();
       const bookId = books.length > 0 ? books[0].id : 1;
+      const asset_account_id = await resolveAssetAccountId();
       if (editId) {
-        await TransactionRepo.update(editId, { category_id: categoryId, amount: num, type, note, date });
+        await TransactionRepo.update(editId, { category_id: categoryId, amount: num, type, note, date, asset_account_id });
         // 编辑后直接返回，让 HomeScreen 通过 useFocusEffect 刷新（保持滚动位置）
         navigation.goBack();
       } else {
-        await TransactionRepo.create({ book_id: bookId, category_id: categoryId, amount: num, type, note, date });
+        await TransactionRepo.create({ book_id: bookId, category_id: categoryId, amount: num, type, note, date, asset_account_id });
       }
     } catch (e: any) {
       showThemedAlert('保存失败', String(e?.message || e));
@@ -450,13 +478,14 @@ export default function AddTransactionScreen() {
 
       const books = await AccountBookRepo.getAll();
       const bookId = books.length > 0 ? books[0].id : 1;
+      const asset_account_id = await resolveAssetAccountId();
 
       if (editId) {
-        await TransactionRepo.update(editId, { category_id: categoryId, amount: num, type, note, date });
+        await TransactionRepo.update(editId, { category_id: categoryId, amount: num, type, note, date, asset_account_id });
         // 编辑后直接返回，让 HomeScreen 通过 useFocusEffect 刷新（保持滚动位置）
         navigation.goBack();
       } else {
-        await TransactionRepo.create({ book_id: bookId, category_id: categoryId, amount: num, type, note, date });
+        await TransactionRepo.create({ book_id: bookId, category_id: categoryId, amount: num, type, note, date, asset_account_id });
         // 新建后通过 reset 跳到 Home（因为输入页不复用）
         navigation.reset({
           index: 0,
@@ -494,8 +523,9 @@ export default function AddTransactionScreen() {
 
       const books = await AccountBookRepo.getAll();
       const bookId = books.length > 0 ? books[0].id : 1;
+      const asset_account_id = await resolveAssetAccountId();
 
-      await TransactionRepo.create({ book_id: bookId, category_id: categoryId, amount: num, type, note, date });
+      await TransactionRepo.create({ book_id: bookId, category_id: categoryId, amount: num, type, note, date, asset_account_id });
 
       // 清空金额和备注，保留类型、分类和日期
       setAmount('');
@@ -535,6 +565,10 @@ export default function AddTransactionScreen() {
         </View>
         <View style={styles.headerSpacer} />
       </LinearGradient>
+
+      {trackingStatus && date >= trackingStatus.startDate && (!editId || editId > trackingStatus.baselineTransactionId) && (
+        <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId} onSelect={setSelectedAssetAccountId} />
+      )}
 
       {/* 分类网格 — 上方区域，自然填充剩余空间 */}
       <Animated.View
