@@ -152,3 +152,52 @@ test('later income and expenses never change manually managed asset balances', a
     assert.equal(account.balance_cents, 580000);
   } finally { sqlite.close(); }
 });
+
+test('restarting asset tracking keeps current balances and history, then counts only new entries', async () => {
+  const { repo, sqlite } = await fixture(null);
+  try {
+    sqlite.exec(`CREATE TABLE transactions (id INTEGER PRIMARY KEY, asset_account_id INTEGER, amount REAL, type TEXT, date TEXT);
+      CREATE TABLE cashback_records (id INTEGER PRIMARY KEY, transaction_id INTEGER, asset_account_id INTEGER, amount REAL, date TEXT);
+      CREATE TABLE asset_balance_adjustments (id INTEGER PRIMARY KEY, account_id INTEGER, delta_cents INTEGER, balance_cents INTEGER);`);
+    await repo.create({ name: '银行卡', provider: 'cmb', balance_cents: 100000 });
+    await repo.create({ name: '微信', provider: 'wechat', balance_cents: 20000 });
+    await repo.enableAutoTracking();
+    const startDate = (await repo.getTrackingStatus()).startDate;
+    sqlite.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?)').run(1, 1, 100, 'expense', startDate);
+    sqlite.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?)').run(2, 2, 50, 'income', startDate);
+    sqlite.prepare('INSERT INTO cashback_records VALUES (?, ?, ?, ?, ?)').run(1, 1, 1, 10, startDate);
+    await repo.update(1, { name: '银行卡', provider: 'cmb', balance_cents: 93000 });
+    assert.deepEqual((await repo.getAll()).map((account) => account.balance_cents), [93000, 25000]);
+
+    await repo.restartAutoTracking();
+    assert.deepEqual((await repo.getAll()).map((account) => account.balance_cents), [93000, 25000]);
+    assert.deepEqual(await repo.getPeriodTotals(), { income_cents: 0, expense_cents: 0 });
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM transactions').get().count, 2);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM cashback_records').get().count, 1);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM asset_balance_adjustments').get().count, 1);
+
+    sqlite.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?)').run(3, 1, 20, 'expense', startDate);
+    sqlite.prepare('INSERT INTO cashback_records VALUES (?, ?, ?, ?, ?)').run(2, 3, 1, 5, startDate);
+    assert.deepEqual((await repo.getAll()).map((account) => account.balance_cents), [91500, 25000]);
+    assert.deepEqual(await repo.getPeriodTotals(), { income_cents: 500, expense_cents: 2000 });
+  } finally { sqlite.close(); }
+});
+
+test('failed restart rolls back both the opening balance and tracking boundary', async () => {
+  const { repo, sqlite } = await fixture(null);
+  try {
+    sqlite.exec(`CREATE TABLE transactions (id INTEGER PRIMARY KEY, asset_account_id INTEGER, amount REAL, type TEXT, date TEXT);
+      CREATE TABLE cashback_records (id INTEGER PRIMARY KEY, transaction_id INTEGER, asset_account_id INTEGER, amount REAL, date TEXT);`);
+    await repo.create({ name: '银行卡', provider: 'cmb', balance_cents: 100000 });
+    await repo.enableAutoTracking();
+    const status = await repo.getTrackingStatus();
+    sqlite.prepare('INSERT INTO transactions VALUES (?, ?, ?, ?, ?)').run(1, 1, 100, 'expense', status.startDate);
+    sqlite.exec(`CREATE TRIGGER fail_restart BEFORE UPDATE ON app_settings
+      WHEN NEW.key = 'asset_tracking_start_date'
+      BEGIN SELECT RAISE(ABORT, 'simulated restart failure'); END`);
+    await assert.rejects(repo.restartAutoTracking(), /simulated restart failure/);
+    assert.equal((await repo.getAll())[0].balance_cents, 90000);
+    assert.deepEqual(await repo.getTrackingStatus(), status);
+    assert.deepEqual(await repo.getPeriodTotals(), { income_cents: 0, expense_cents: 10000 });
+  } finally { sqlite.close(); }
+});

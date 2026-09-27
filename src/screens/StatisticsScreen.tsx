@@ -27,6 +27,15 @@ const CIRCLE_SIZE = 138;
 const CIRCLE_RADIUS = 46;
 const CIRCLE_STROKE = 20;
 const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+const CHART_Y_AXIS_GUTTER = 54;
+const CHART_RIGHT_INSET = 18;
+
+function formatYAxisAmount(value: string): string {
+  const amount = Number(value);
+  if (Math.abs(amount) >= 100000000) return `${(amount / 100000000).toFixed(1).replace(/\.0$/, '')}亿`;
+  if (Math.abs(amount) >= 10000) return `${(amount / 10000).toFixed(1).replace(/\.0$/, '')}万`;
+  return String(Math.round(amount));
+}
 
 type TimeMode = 'week' | 'month' | 'year';
 type ViewMode = 'expense' | 'income';
@@ -422,7 +431,7 @@ export default function StatisticsScreen() {
           return '';
         }),
         datasets: [{
-          data: data.some((v) => v > 0) ? data : [0],
+          data,
           color: () => COLORS.primaryDark,
           strokeWidth: 2,
         }],
@@ -471,6 +480,14 @@ export default function StatisticsScreen() {
   const filteredCategories = categoryData.filter((c) => c.type === viewMode);
   const total = viewMode === 'expense' ? rangeSummary?.expense ?? 0 : rangeSummary?.income ?? 0;
   const chart = getLineChartData();
+  const isZeroChart = chart?.datasets.every((dataset) => dataset.data.every((value) => value === 0)) ?? false;
+  const chartYAxisGutter = isZeroChart ? 30 : CHART_Y_AXIS_GUTTER;
+  const lineChartWidth = Math.max(200, chartWidth - 10);
+  const pointCount = chart?.datasets[0]?.data.length ?? 0;
+  // chart-kit 会为最后一个数据点额外预留一个间隔，扩大内部画布并在卡片边缘裁切。
+  const lineChartRenderWidth = pointCount > 1
+    ? chartYAxisGutter + (lineChartWidth - chartYAxisGutter - CHART_RIGHT_INSET) * pointCount / (pointCount - 1)
+    : lineChartWidth;
 
   return (
     <View style={styles.container}>
@@ -546,7 +563,7 @@ export default function StatisticsScreen() {
           </View>
         </View>
 
-        <View style={styles.card} onLayout={onChartLayout}>
+        <View style={[styles.card, styles.trendCard]} onLayout={onChartLayout}>
           <View style={styles.cardHeaderRow}>
             <Text style={styles.cardTitle}>{viewMode === 'expense' ? '支出趋势' : '收入趋势'}</Text>
             <View style={styles.navGroup}>
@@ -555,38 +572,44 @@ export default function StatisticsScreen() {
             </View>
           </View>
           {chart ? (
-            <LineChart
-              data={chart}
-              width={Math.max(200, chartWidth - 32)}
-              height={190}
-              yAxisLabel="¥"
-              yLabelsOffset={18}
-              xLabelsOffset={-6}
-              chartConfig={{
-                backgroundColor: COLORS.surface,
-                backgroundGradientFrom: COLORS.surface,
-                backgroundGradientTo: COLORS.surface,
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                labelColor: () => COLORS.textLight,
-                horizontalOffset: 0,
-                propsForDots: {
-                  r: '3',
-                  strokeWidth: '0',
-                  fill: COLORS.primaryDark,
-                },
-                propsForBackgroundLines: {
-                  strokeDasharray: '4',
-                  stroke: COLORS.divider,
-                },
-              }}
-              bezier
-              style={StyleSheet.flatten([
-                styles.chart,
-                { paddingRight: 32, marginRight: 0, paddingLeft: 0, marginLeft: 8 },
-              ])}
-              fromZero
-            />
+            <View style={[styles.chartViewport, { width: lineChartWidth }]}>
+              <LineChart
+                data={chart}
+                width={lineChartRenderWidth}
+                height={190}
+                yAxisLabel="¥"
+                yLabelsOffset={isZeroChart ? 10 : 15}
+                formatYLabel={formatYAxisAmount}
+                xLabelsOffset={-6}
+                segments={isZeroChart ? 1 : undefined}
+                withDots={!isZeroChart}
+                chartConfig={{
+                  backgroundColor: COLORS.surface,
+                  backgroundGradientFrom: COLORS.surface,
+                  backgroundGradientTo: COLORS.surface,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  labelColor: () => COLORS.textLight,
+                  propsForHorizontalLabels: { fontSize: 10 },
+                  horizontalOffset: 0,
+                  propsForDots: {
+                    r: '3',
+                    strokeWidth: '0',
+                    fill: COLORS.primaryDark,
+                  },
+                  propsForBackgroundLines: {
+                    strokeDasharray: '4',
+                    stroke: COLORS.divider,
+                  },
+                }}
+                bezier
+                style={StyleSheet.flatten([
+                  styles.chart,
+                  { width: lineChartRenderWidth, paddingRight: chartYAxisGutter, marginRight: 0, paddingLeft: 0, marginLeft: 0 },
+                ])}
+                fromZero
+              />
+            </View>
           ) : (
             <View style={styles.noDataChart}>
               <Ionicons name="analytics-outline" size={44} color={COLORS.textLight} />
@@ -797,6 +820,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     ...SHADOWS.card,
   },
+  trendCard: { paddingRight: 4 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginBottom: 12 },
   donutSection: { flexDirection: 'row', alignItems: 'center' },
@@ -811,7 +835,8 @@ const styles = StyleSheet.create({
   legendPercent: { width: 48, textAlign: 'right', fontSize: 12, color: COLORS.text, fontWeight: '600' },
   navGroup: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   navBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.controlSurface, borderWidth: 1, borderColor: COLORS.controlBorder, alignItems: 'center', justifyContent: 'center' },
-  chart: { borderRadius: 12, marginLeft: 0, alignSelf: 'center' },
+  chartViewport: { overflow: 'hidden', marginLeft: -8 },
+  chart: { borderRadius: 12, marginLeft: 0, alignSelf: 'flex-start' },
   noDataChart: { height: 180, alignItems: 'center', justifyContent: 'center', gap: 8 },
   noDataText: { fontSize: 13, color: COLORS.textLight, fontWeight: '600' },
   yearOverlay: { flex: 1, backgroundColor: 'rgba(58,46,31,0.35)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 88, paddingRight: 18 },

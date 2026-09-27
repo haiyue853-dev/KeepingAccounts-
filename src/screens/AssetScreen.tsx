@@ -26,6 +26,8 @@ export default function AssetScreen() {
   const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
   const [periodTotals, setPeriodTotals] = useState({ income_cents: 0, expense_cents: 0 });
   const deleteLock = useRef(false);
+  const restartLock = useRef(false);
+  const [restarting, setRestarting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -89,6 +91,25 @@ export default function AssetScreen() {
     }, '开始计算');
   };
 
+  const restartTracking = () => {
+    showThemedConfirm('重新开始计算', '以各账户当前余额作为新的期初余额，从今天重新计算收支。已有记账流水会保留，但不会重复计入新起点后的资产。确定继续吗？', () => {
+      void (async () => {
+        if (restartLock.current) return;
+        restartLock.current = true;
+        setRestarting(true);
+        try {
+          await AssetAccountRepo.restartAutoTracking();
+          await load();
+        } catch (error) {
+          showThemedAlert('重新开始失败', error instanceof Error ? error.message : '请重试');
+        } finally {
+          restartLock.current = false;
+          setRestarting(false);
+        }
+      })();
+    }, '重新开始');
+  };
+
   if (editing !== undefined) {
     return <AssetAccountEditor key={editing?.id ?? 'new'} account={editing} onSave={save}
       onCancel={() => setEditing(undefined)} insetsBottom={insets.bottom} insetsTop={insets.top} />;
@@ -123,7 +144,12 @@ export default function AssetScreen() {
 
         {!loading && !loadError && trackingStatus && (
           <View style={styles.trackingCard}>
-            <Text style={styles.trackingDate}>从 {trackingStatus.startDate} 开始</Text>
+            <View style={styles.trackingHeader}>
+              <Text style={styles.trackingDate}>从 {trackingStatus.startDate} 开始</Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="重新开始资产计算" onPress={restartTracking} disabled={restarting} style={styles.restartButton}>
+                {restarting ? <ActivityIndicator size="small" color={COLORS.primaryDark} /> : <Text style={styles.restartButtonText}>重新开始</Text>}
+              </TouchableOpacity>
+            </View>
             <View style={styles.trackingTotals}>
               <Text style={styles.trackingIncome}>收入 +¥{formatAmount(periodTotals.income_cents / 100)}</Text>
               <Text style={styles.trackingExpense}>支出 -¥{formatAmount(periodTotals.expense_cents / 100)}</Text>
@@ -228,7 +254,10 @@ const styles = StyleSheet.create({
   emptyAction: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.controlSurface, borderWidth: 1, borderColor: COLORS.controlBorder, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 13, marginTop: 22, gap: 5 },
   disclaimer: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center', marginTop: 12, paddingHorizontal: 30, lineHeight: 18 },
   trackingCard: { marginHorizontal: 16, marginTop: 14, padding: 15, borderRadius: 17, backgroundColor: COLORS.surface, ...SHADOWS.card },
-  trackingDate: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10 },
+  trackingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  trackingDate: { fontSize: 12, color: COLORS.textSecondary },
+  restartButton: { minHeight: 30, justifyContent: 'center', paddingHorizontal: 9, borderRadius: 9, backgroundColor: COLORS.controlSurface },
+  restartButtonText: { fontSize: 12, color: COLORS.primaryDark, fontWeight: '600' },
   trackingTotals: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   trackingIncome: { fontSize: 14, color: COLORS.income, fontWeight: '600' },
   trackingExpense: { fontSize: 14, color: COLORS.expense, fontWeight: '600' },

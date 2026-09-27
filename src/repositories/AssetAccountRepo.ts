@@ -58,6 +58,10 @@ export class AssetAccountRepo {
     if (!status) {
       return db.getAllAsync<AssetAccount>('SELECT id, name, provider, balance_cents FROM asset_accounts ORDER BY id');
     }
+    return this.getTrackedAccounts(db, status);
+  }
+
+  private static getTrackedAccounts(db: Awaited<ReturnType<typeof getDatabase>>, status: AssetTrackingStatus): Promise<AssetAccount[]> {
     return db.getAllAsync<AssetAccount>(
       `SELECT a.id, a.name, a.provider,
         a.opening_balance_cents + a.adjustment_cents
@@ -75,6 +79,10 @@ export class AssetAccountRepo {
 
   static async getTrackingStatus(): Promise<AssetTrackingStatus | null> {
     const db = await this.ready();
+    return this.getTrackingStatusFromDb(db);
+  }
+
+  private static async getTrackingStatusFromDb(db: Awaited<ReturnType<typeof getDatabase>>): Promise<AssetTrackingStatus | null> {
     const rows = await db.getAllAsync<{ key: string; value: string }>(
       'SELECT key, value FROM app_settings WHERE key IN (?, ?, ?)',
       [START_KEY, BASELINE_TX_KEY, BASELINE_ADJUSTMENT_KEY]
@@ -103,6 +111,29 @@ export class AssetAccountRepo {
         [BASELINE_ADJUSTMENT_KEY, String(adjustment?.id ?? 0)],
       ]) {
         await db.runAsync('INSERT INTO app_settings (key, value) VALUES (?, ?)', [key, value]);
+      }
+    });
+  }
+
+  static async restartAutoTracking(): Promise<void> {
+    const db = await this.ready();
+    await db.withTransactionAsync(async () => {
+      const status = await this.getTrackingStatusFromDb(db);
+      if (!status) throw new Error('请先开始资产自动计算');
+      const accounts = await this.getTrackedAccounts(db, status);
+      const tx = await db.getFirstAsync<{ id: number }>('SELECT COALESCE(MAX(id), 0) AS id FROM transactions');
+      const adjustment = await db.getFirstAsync<{ id: number }>('SELECT COALESCE(MAX(id), 0) AS id FROM cashback_records');
+      for (const account of accounts) {
+        await db.runAsync(
+          'UPDATE asset_accounts SET balance_cents = ?, opening_balance_cents = ?, adjustment_cents = 0, updated_at = datetime(\'now\',\'localtime\') WHERE id = ?',
+          [account.balance_cents, account.balance_cents, account.id]
+        );
+      }
+      for (const [key, value] of [
+        [START_KEY, getToday()], [BASELINE_TX_KEY, String(tx?.id ?? 0)],
+        [BASELINE_ADJUSTMENT_KEY, String(adjustment?.id ?? 0)],
+      ]) {
+        await db.runAsync('UPDATE app_settings SET value = ?, updated_at = datetime(\'now\',\'localtime\') WHERE key = ?', [value, key]);
       }
     });
   }
