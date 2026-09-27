@@ -4,7 +4,7 @@
 
 ## 📥 下载 Android 安装包
 
-最新版本：[v1.3.3 APK](https://github.com/haiyue853-dev/KeepingAccounts-/releases/download/v1.3.3/KeepingAccounts-v1.3.3.apk) · [版本说明](https://github.com/haiyue853-dev/KeepingAccounts-/releases/tag/v1.3.3)
+最新版本：[v1.3.3 APK](https://github.com/haiyue853-dev/KeepingAccounts-/releases/download/v1.3.3/iSave-v1.3.3.apk) · [版本说明](https://github.com/haiyue853-dev/KeepingAccounts-/releases/tag/v1.3.3)
 
 同包名、同签名的旧版可以覆盖安装并保留本地数据。请勿先卸载旧版；若系统提示签名不一致，不要卸载以尝试安装，先确认旧版的来源。
 
