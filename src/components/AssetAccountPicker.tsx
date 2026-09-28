@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, marginRight: 8 },
   list: { alignItems: 'center', gap: 7, paddingRight: 12 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 14, backgroundColor: COLORS.controlSurface, maxWidth: 150 },
-  selected: { backgroundColor: COLORS.primaryLight },
+  selected: { backgroundColor: '#CFE3FF' },
   name: { fontSize: 12, color: COLORS.textSecondary },
   selectedName: { color: COLORS.primaryDark, fontWeight: '600' },
   empty: { fontSize: 12, color: COLORS.textSecondary },
