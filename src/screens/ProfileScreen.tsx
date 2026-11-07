@@ -9,8 +9,9 @@ import { File, Paths } from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showThemedAlert } from '../components/AlertProvider';
 import { COLORS, SHADOWS } from '../utils/constants';
+import appConfig from '../../app.json';
 
-const APP_VERSION = '1.3.3';
+const APP_VERSION = appConfig.expo.version;
 const AVATAR_STORAGE_KEY = 'profile.avatarUri';
 
 function compressWebAvatar(source: string): Promise<string> {
