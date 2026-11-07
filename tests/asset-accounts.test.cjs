@@ -58,7 +58,7 @@ test('keypad replaces edited balances, limits decimals and supports operator cor
   assert.equal(appendAssetKey('', '-'), '-');
 });
 
-async function fixture(initial, totals = { income: 200, expense: 50 }) {
+async function fixture(initial, totals = { income: 200, expense: 50 }, defaultCashInitialized = true) {
   const sqlite = new DatabaseSync(':memory:');
   const db = {
     runAsync: async (sql, args = []) => {
@@ -79,6 +79,8 @@ async function fixture(initial, totals = { income: 200, expense: 50 }) {
     sqlite.exec(match[1]);
   }
   if (initial !== null) sqlite.prepare('INSERT INTO app_settings (key,value) VALUES (?,?)').run('initial_balance', String(initial));
+  // Existing scenarios operate after default-account setup; initialization tests opt out.
+  if (defaultCashInitialized) sqlite.prepare('INSERT INTO app_settings (key,value) VALUES (?,?)').run('asset_default_cash_initialized_v1', '1');
   const { AssetAccountRepo } = loadTs('src/repositories/AssetAccountRepo.ts', {
     '../db/database': { getDatabase: async () => db },
     './SettingsRepo': { SettingsRepo: { getInitialBalance: async () => initial } },
@@ -86,6 +88,62 @@ async function fixture(initial, totals = { income: 200, expense: 50 }) {
   });
   return { repo: AssetAccountRepo, sqlite };
 }
+
+test('default cash starts at zero, is created once concurrently and stays deleted after reload', async () => {
+  const { repo, sqlite } = await fixture(null, undefined, false);
+  try {
+    const [accounts, concurrent] = await Promise.all([repo.getAll(), repo.getAll()]);
+    assert.deepEqual(accounts.map(({ name, provider, balance_cents }) => ({ name, provider, balance_cents })),
+      [{ name: '现金', provider: 'cash', balance_cents: 0 }]);
+    assert.deepEqual(concurrent, accounts);
+    assert.equal(sqlite.prepare('SELECT opening_balance_cents FROM asset_accounts').get().opening_balance_cents, 0);
+    await repo.update(accounts[0].id, { name: '钱包', provider: 'cash', balance_cents: 12345 });
+    assert.equal((await repo.getAll())[0].balance_cents, 12345);
+    await repo.remove(accounts[0].id);
+    assert.deepEqual(await repo.getAll(), []);
+  } finally { sqlite.close(); }
+});
+
+test('default cash is added for upgraded users without changing existing assets', async () => {
+  const { repo, sqlite } = await fixture(null, undefined, false);
+  try {
+    sqlite.prepare('INSERT INTO app_settings (key,value) VALUES (?,?)').run('asset_accounts_migrated_v1', '1');
+    sqlite.exec("INSERT INTO asset_accounts (name, provider, balance_cents, opening_balance_cents) VALUES ('工资卡', 'cmb', 50000, 50000)");
+    const accounts = await repo.getAll();
+    assert.deepEqual(accounts.map(({ provider, balance_cents }) => [provider, balance_cents]), [['cmb', 50000], ['cash', 0]]);
+    assert.deepEqual(await repo.getAll(), accounts);
+  } finally { sqlite.close(); }
+});
+
+test('existing cash is preserved and initialization is remembered even after deletion', async () => {
+  const { repo, sqlite } = await fixture(null, undefined, false);
+  try {
+    sqlite.prepare('INSERT INTO app_settings (key,value) VALUES (?,?)').run('asset_accounts_migrated_v1', '1');
+    sqlite.exec("INSERT INTO asset_accounts (name, provider, balance_cents, opening_balance_cents) VALUES ('随身现金', 'cash', 24680, 24680)");
+    const accounts = await repo.getAll();
+    assert.equal(accounts.length, 1);
+    assert.equal(accounts[0].name, '随身现金');
+    assert.equal(accounts[0].balance_cents, 24680);
+    assert.equal(sqlite.prepare('SELECT value FROM app_settings WHERE key = ?').get('asset_default_cash_initialized_v1')?.value, '1');
+    await repo.remove(accounts[0].id);
+    assert.deepEqual(await repo.getAll(), []);
+  } finally { sqlite.close(); }
+});
+
+test('default cash failure rolls back and retry preserves the legacy balance without duplicates', async () => {
+  const { repo, sqlite } = await fixture(1000, undefined, false);
+  try {
+    sqlite.exec(`CREATE TRIGGER fail_cash BEFORE INSERT ON app_settings
+      WHEN NEW.key = 'asset_default_cash_initialized_v1'
+      BEGIN SELECT RAISE(ABORT, 'simulated cash failure'); END`);
+    await assert.rejects(repo.getAll(), /simulated cash failure/);
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM asset_accounts').get().count, 0);
+    sqlite.exec('DROP TRIGGER fail_cash');
+    const accounts = await repo.getAll();
+    assert.deepEqual(accounts.map(({ name, balance_cents }) => [name, balance_cents]), [['原有资产', 115000], ['现金', 0]]);
+    assert.deepEqual(await repo.getAll(), accounts);
+  } finally { sqlite.close(); }
+});
 
 test('old remaining balance migrates once and never returns after deleting all accounts', async () => {
   const { repo, sqlite } = await fixture(1000);

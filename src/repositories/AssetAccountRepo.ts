@@ -7,6 +7,7 @@ import { TransactionRepo } from './TransactionRepo';
 import { getToday } from '../utils/formatters';
 
 const MIGRATION_KEY = 'asset_accounts_migrated_v1';
+const DEFAULT_CASH_KEY = 'asset_default_cash_initialized_v1';
 const START_KEY = 'asset_tracking_start_date';
 const BASELINE_TX_KEY = 'asset_tracking_baseline_tx_id';
 const BASELINE_ADJUSTMENT_KEY = 'asset_tracking_baseline_adjustment_id';
@@ -25,17 +26,30 @@ export class AssetAccountRepo {
     if (!this.migration) {
       this.migration = db.withTransactionAsync(async () => {
         const marker = await db.getFirstAsync('SELECT value FROM app_settings WHERE key = ?', [MIGRATION_KEY]);
-        if (marker) return;
-        const initial = await SettingsRepo.getInitialBalance();
-        if (initial !== null) {
-          const totals = await TransactionRepo.getGlobalTotals();
-          const cents = toAssetCents(initial + totals.income - totals.expense);
-          await db.runAsync(
-            'INSERT INTO asset_accounts (name, provider, balance_cents) VALUES (?, ?, ?)',
-            ['原有资产', 'other', cents]
-          );
+        if (!marker) {
+          const initial = await SettingsRepo.getInitialBalance();
+          if (initial !== null) {
+            const totals = await TransactionRepo.getGlobalTotals();
+            const cents = toAssetCents(initial + totals.income - totals.expense);
+            await db.runAsync(
+              'INSERT INTO asset_accounts (name, provider, balance_cents) VALUES (?, ?, ?)',
+              ['原有资产', 'other', cents]
+            );
+          }
+          await db.runAsync('INSERT INTO app_settings (key, value) VALUES (?, ?)', [MIGRATION_KEY, '1']);
         }
-        await db.runAsync('INSERT INTO app_settings (key, value) VALUES (?, ?)', [MIGRATION_KEY, '1']);
+        // Seed once for new and existing users; respect later edits and deletions.
+        const cashMarker = await db.getFirstAsync('SELECT value FROM app_settings WHERE key = ?', [DEFAULT_CASH_KEY]);
+        if (!cashMarker) {
+          const cash = await db.getFirstAsync('SELECT id FROM asset_accounts WHERE provider = ? LIMIT 1', ['cash']);
+          if (!cash) {
+            await db.runAsync(
+              'INSERT INTO asset_accounts (name, provider, balance_cents, opening_balance_cents) VALUES (?, ?, ?, ?)',
+              ['现金', 'cash', 0, 0]
+            );
+          }
+          await db.runAsync('INSERT INTO app_settings (key, value) VALUES (?, ?)', [DEFAULT_CASH_KEY, '1']);
+        }
       }).finally(() => { this.migration = null; });
     }
     await this.migration;
@@ -69,11 +83,10 @@ export class AssetAccountRepo {
             FROM transactions t WHERE t.asset_account_id = a.id AND t.id > ? AND t.date >= ?), 0)
         + COALESCE((SELECT SUM(ROUND(cr.amount * 100)) FROM cashback_records cr
             JOIN transactions t ON t.id = cr.transaction_id
-            WHERE COALESCE(cr.asset_account_id, t.asset_account_id) = a.id AND t.id > ? AND t.date >= ?
+            WHERE COALESCE(cr.asset_account_id, t.asset_account_id) = a.id
               AND cr.id > ? AND cr.date >= ?), 0) AS balance_cents
        FROM asset_accounts a ORDER BY a.id`,
-      [status.baselineTransactionId, status.startDate, status.baselineTransactionId,
-        status.startDate, status.baselineAdjustmentId, status.startDate]
+      [status.baselineTransactionId, status.startDate, status.baselineAdjustmentId, status.startDate]
     );
   }
 
@@ -153,8 +166,8 @@ export class AssetAccountRepo {
       `SELECT COALESCE(SUM(ROUND(cr.amount * 100)), 0) AS cents
        FROM cashback_records cr JOIN transactions t ON t.id = cr.transaction_id
        JOIN asset_accounts a ON a.id = COALESCE(cr.asset_account_id, t.asset_account_id)
-       WHERE t.id > ? AND t.date >= ? AND cr.id > ? AND cr.date >= ?`,
-      [status.baselineTransactionId, status.startDate, status.baselineAdjustmentId, status.startDate]
+       WHERE cr.id > ? AND cr.date >= ?`,
+      [status.baselineAdjustmentId, status.startDate]
     );
     return { income_cents: (totals?.income_cents ?? 0) + (returned?.cents ?? 0), expense_cents: totals?.expense_cents ?? 0 };
   }

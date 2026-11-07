@@ -15,7 +15,6 @@ import AddTransactionScreen from '../screens/AddTransactionScreen';
 import CategoryScreen from '../screens/CategoryScreen';
 import StatisticsScreen from '../screens/StatisticsScreen';
 import ImportExportScreen from '../screens/ImportExportScreen';
-import VoiceInputScreen from '../screens/VoiceInputScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -129,7 +128,7 @@ export default function AppNavigator() {
     >
       <Stack.Screen name="MainTabs" component={HomeTabs} options={{ headerShown: false }} />
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ headerShown: false, animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="VoiceInput" component={VoiceInputScreen} options={{ title: '语音记账' }} />
+      <Stack.Screen name="VoiceInput" component={DiscoverScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ImportExport" component={ImportExportScreen} options={{ title: '导入导出' }} />
       <Stack.Screen
         name="Category"

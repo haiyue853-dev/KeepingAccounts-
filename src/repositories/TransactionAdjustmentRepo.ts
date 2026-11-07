@@ -41,10 +41,6 @@ export class TransactionAdjustmentRepo {
        WHERE id = ?`,
       [data.type, data.amount, data.date, data.note ?? '', data.asset_account_id ?? null, current.id]
     );
-    await db.runAsync(
-      'DELETE FROM cashback_records WHERE transaction_id = ? AND id <> ?',
-      [data.transaction_id, current.id]
-    );
     return current.id;
   }
 

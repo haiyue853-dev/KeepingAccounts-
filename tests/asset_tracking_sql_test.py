@@ -24,14 +24,14 @@ INSERT INTO cashback_records VALUES
   (2, 2, 2, 5, '2026-09-27');
 ''')
 date = '2026-09-27'
-params = (1, date, 1, date, 1, date)
+params = (1, date, 1, date)
 
 def balances():
     return {row['name']: row['balance_cents'] for row in db.execute(balance_sql, params)}
 
 assert balances() == {'Bank': 97000, 'WeChat': 25500}, balances()
 assert tuple(db.execute(totals_sql, (1, date)).fetchone()) == (5000, 3000)
-assert db.execute(refund_sql, (1, date, 1, date)).fetchone()[0] == 500
+assert db.execute(refund_sql, (1, date)).fetchone()[0] == 500
 db.execute('UPDATE transactions SET amount = 40 WHERE id = 2')
 assert balances()['Bank'] == 96000
 db.execute('UPDATE transactions SET asset_account_id = 2 WHERE id = 2')
@@ -41,4 +41,7 @@ db.execute('DELETE FROM transactions WHERE id = 2')
 assert balances() == {'Bank': 100000, 'WeChat': 25000}, balances()
 db.execute('UPDATE asset_accounts SET adjustment_cents = 700 WHERE id = 1')
 assert balances()['Bank'] == 100700
+db.execute("INSERT INTO cashback_records VALUES (3, 4, 2, 7, '2026-09-27')")
+assert balances()['WeChat'] == 25700, balances()
+assert db.execute(refund_sql, (1, date)).fetchone()[0] == 700
 print('Asset tracking SQL scenarios passed')

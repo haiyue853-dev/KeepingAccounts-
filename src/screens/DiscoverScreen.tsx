@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput, ActivityIndicator,
@@ -9,102 +9,139 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { DeepSeekConfig } from '../services/deepseek/DeepSeekConfig';
-import { DeepSeekTransactionParser, ParsedTransaction } from '../services/deepseek/DeepSeekTransactionParser';
+import { DeepSeekTransactionParser } from '../services/deepseek/DeepSeekTransactionParser';
 import { TransactionRepo } from '../repositories/TransactionRepo';
 import { CategoryRepo } from '../repositories/CategoryRepo';
 import { AccountBookRepo } from '../repositories/AccountBookRepo';
-import { getToday } from '../utils/formatters';
-import { resolveTransactionDate } from '../utils/dateParser';
 import { showThemedAlert } from '../components/AlertProvider';
 import { AssetAccountRepo, AssetTrackingStatus } from '../repositories/AssetAccountRepo';
 import type { AssetAccount } from '../models/AssetAccount';
-import AssetAccountPicker from '../components/AssetAccountPicker';
+import type { Category } from '../models/Category';
+import type { Transaction } from '../models/Transaction';
+import { isAdjustment, makeVoiceDraft, VoiceBookkeepingService, VoiceDraft } from '../services/VoiceBookkeepingService';
+import VoiceDraftCard from '../components/VoiceDraftCard';
 
 export default function DiscoverScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [isConfigured, setIsConfigured] = useState(false);
   const [inputText, setInputText] = useState('');
-  const [parsedResults, setParsedResults] = useState<ParsedTransaction[]>([]);
+  const [parsedResults, setParsedResults] = useState<(VoiceDraft & { rowId: string })[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [assetAccounts, setAssetAccounts] = useState<AssetAccount[]>([]);
   const [trackingStatus, setTrackingStatus] = useState<AssetTrackingStatus | null>(null);
-  const [selectedAssetAccountId, setSelectedAssetAccountId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [expenses, setExpenses] = useState<Transaction[]>([]);
+  const [expensesLoaded, setExpensesLoaded] = useState(false);
+  const [bookId, setBookId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
+  const parseVersion = useRef(0);
+  const savedVersion = useRef<number | null>(null);
+
+  React.useEffect(() => () => { parseVersion.current++; }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      DeepSeekConfig.isConfigured().then(setIsConfigured);
+      let active = true;
+      DeepSeekConfig.isConfigured().then(value => { if (active) setIsConfigured(value); }).catch(() => { if (active) setIsConfigured(false); });
       void Promise.all([AssetAccountRepo.getTrackingStatus(), AssetAccountRepo.getAll()]).then(([status, accounts]) => {
+        if (!active) return;
         setTrackingStatus(status);
         setAssetAccounts(accounts);
-        if (status) setSelectedAssetAccountId((current) => current ?? accounts[0]?.id ?? null);
       }).catch((error) => console.warn('加载资产账户失败:', error));
+      return () => { active = false; };
     }, [])
   );
 
   const handleParse = async () => {
+    if (saveLock.current) return;
     if (!inputText.trim()) {
       showThemedAlert('提示', '请输入内容');
       return;
     }
+    const version = ++parseVersion.current;
+    const text = inputText.trim();
+    setParsedResults([]);
     setLoading(true);
     setErrorMsg('');
     try {
-      const parsed = await DeepSeekTransactionParser.parse(inputText.trim());
-      setParsedResults(parsed);
+      const [books, nextCategories, accounts, status] = await Promise.all([
+        AccountBookRepo.getAll(), CategoryRepo.getAll(), AssetAccountRepo.getAll(), AssetAccountRepo.getTrackingStatus(),
+      ]);
+      if (version !== parseVersion.current) return;
+      if (!books.length) throw new Error('请先创建账本');
+      const parsed = await DeepSeekTransactionParser.parse(text, {
+        expenseCategories: nextCategories.filter(category => category.type === 'expense').map(category => category.name),
+        incomeCategories: nextCategories.filter(category => category.type === 'income').map(category => category.name),
+        accountNames: accounts.map(account => account.name),
+      });
+      const needsOriginals = parsed.some(item => isAdjustment(item.type));
+      const originals = needsOriginals ? await TransactionRepo.getAll({ book_id: books[0].id, type: 'expense' }) : [];
+      if (version !== parseVersion.current) return;
+      setBookId(books[0].id);
+      setCategories(nextCategories);
+      setAssetAccounts(accounts);
+      setTrackingStatus(status);
+      setExpenses(originals);
+      setExpensesLoaded(needsOriginals);
+      setParsedResults(parsed.map((item, index) => ({ ...makeVoiceDraft(item, nextCategories, accounts), rowId: `${version}-${index}` })));
+      if (!parsed.length) setErrorMsg('没有识别到可记账内容，请说明金额、日期和用途。');
     } catch (e: any) {
-      setErrorMsg(e.message || '解析失败');
-      setParsedResults([]);
+      if (version === parseVersion.current) {
+        setErrorMsg(e.message || '解析失败');
+        setParsedResults([]);
+      }
     } finally {
-      setLoading(false);
+      if (version === parseVersion.current) setLoading(false);
     }
   };
 
   const handleSaveAll = async () => {
-    if (parsedResults.length === 0) {
+    if (saveLock.current || loading || savedVersion.current === parseVersion.current) return;
+    if (parsedResults.length === 0 || !bookId) {
       showThemedAlert('提示', '没有可保存的记录');
       return;
     }
+    saveLock.current = true;
+    setSaving(true);
     try {
-      const books = await AccountBookRepo.getAll();
-      if (books.length === 0) { showThemedAlert('提示', '没有找到账本'); return; }
-      const bookId = books[0].id;
-      const status = await AssetAccountRepo.getTrackingStatus();
-      if (status && parsedResults.some((item) => resolveTransactionDate(inputText, item.date) >= status.startDate)
-        && (!selectedAssetAccountId || !(await AssetAccountRepo.getAll()).some((account) => account.id === selectedAssetAccountId))) {
-        showThemedAlert('提示', '请先选择资产账户');
-        return;
-      }
-
-      let saved = 0;
-      for (const item of parsedResults) {
-        if (item.amount <= 0) continue;
-        const categories = await CategoryRepo.getAll(item.type);
-        let categoryId = categories[0]?.id;
-        if (item.categoryName) {
-          const matched = categories.find((c) => c.name === item.categoryName);
-          if (matched) categoryId = matched.id;
-        }
-        if (!categoryId) continue;
-        await TransactionRepo.create({
-          book_id: bookId,
-          category_id: categoryId,
-          amount: item.amount,
-          type: item.type,
-          note: item.note,
-          date: resolveTransactionDate(inputText, item.date),
-          asset_account_id: status && resolveTransactionDate(inputText, item.date) >= status.startDate ? selectedAssetAccountId : null,
-        });
-        saved++;
-      }
-
-      showThemedAlert('保存成功', `已保存 ${saved} 条记录`);
+      await VoiceBookkeepingService.save(parsedResults, bookId);
+      savedVersion.current = parseVersion.current;
       setParsedResults([]);
       setInputText('');
       setErrorMsg('');
+      showThemedAlert('保存成功', `已保存 ${parsedResults.length} 条记录`);
     } catch (e: any) {
       showThemedAlert('保存失败', e.message);
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
+    }
+  };
+
+  const handleInputChange = (text: string) => {
+    if (saveLock.current) return;
+    parseVersion.current++;
+    setInputText(text);
+    setParsedResults([]);
+    setErrorMsg('');
+    setLoading(false);
+  };
+
+  const updateDraft = (rowId: string, patch: Partial<VoiceDraft>) => {
+    if (saveLock.current) return;
+    setParsedResults(previous => previous.map(row => row.rowId === rowId ? { ...row, ...patch } : row));
+    if (patch.type && isAdjustment(patch.type) && !expensesLoaded && bookId) {
+      const version = parseVersion.current;
+      void TransactionRepo.getAll({ book_id: bookId, type: 'expense' }).then(originals => {
+        if (version !== parseVersion.current) return;
+        setExpenses(originals);
+        setExpensesLoaded(true);
+      }).catch(error => {
+        if (version === parseVersion.current) setErrorMsg(error instanceof Error ? error.message : '加载原消费失败');
+      });
     }
   };
 
@@ -122,7 +159,7 @@ export default function DiscoverScreen() {
         <View style={styles.hero}>
           <View style={styles.voiceIcon}><Ionicons name="mic-outline" size={28} color={COLORS.primaryDark} /></View>
           <Text style={styles.heroTitle}>语音记账</Text>
-          <Text style={styles.heroSubtitle}>说出或输入一笔收支</Text>
+          <Text style={styles.heroSubtitle}>用输入法语音输入或打字，支持收支、退款、返现和报销</Text>
           <View style={styles.waveRow}>
             {[10, 18, 26, 16, 31, 22, 12, 20, 28, 14].map((height, index) => (
               <View key={index} style={[styles.waveBar, { height }]} />
@@ -134,8 +171,10 @@ export default function DiscoverScreen() {
           <TextInput
             style={styles.textInput}
             value={inputText}
-            onChangeText={setInputText}
-            placeholder="例如：买了午饭花了35块"
+            onChangeText={handleInputChange}
+            editable={!saving}
+            accessibilityLabel="记账描述"
+            placeholder="例如：11月3日收到10月20日买鞋的退款50元，退到微信"
             placeholderTextColor={COLORS.textLight}
             multiline
             numberOfLines={5}
@@ -143,9 +182,9 @@ export default function DiscoverScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.parseBtn, loading && styles.parseBtnDisabled]}
+          style={[styles.parseBtn, (loading || saving) && styles.parseBtnDisabled]}
           onPress={handleParse}
-          disabled={loading}
+          disabled={loading || saving}
           activeOpacity={0.86}
         >
           {loading ? (
@@ -174,27 +213,21 @@ export default function DiscoverScreen() {
 
         {parsedResults.length > 0 ? (
           <View style={styles.resultCard}>
-            <Text style={styles.resultTitle}>解析结果</Text>
-            {trackingStatus && parsedResults.some((item) => resolveTransactionDate(inputText, item.date) >= trackingStatus.startDate) && (
-              <AssetAccountPicker accounts={assetAccounts} selectedId={selectedAssetAccountId} onSelect={setSelectedAssetAccountId} />
-            )}
-            {parsedResults.map((item, i) => (
-              <View key={`${item.note}-${i}`} style={styles.resultItem}>
-                <View style={styles.resultIcon}>
-                  <Ionicons name={item.type === 'income' ? 'arrow-down' : 'arrow-up'} size={16} color="#fff" />
-                </View>
-                <View style={styles.resultInfo}>
-                  <Text style={styles.resultItemCat}>{item.categoryName || '未识别分类'}</Text>
-                  <Text style={styles.resultItemNote}>{item.note}</Text>
-                  <Text style={styles.resultItemDate}>📅 {resolveTransactionDate(inputText, item.date)}</Text>
-                </View>
-                <Text style={[styles.resultItemAmount, { color: item.type === 'income' ? COLORS.income : COLORS.expense }]}>
-                  {item.type === 'income' ? '+' : '-'}¥{item.amount.toFixed(2)}
-                </Text>
-              </View>
-            ))}
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveAll} activeOpacity={0.86}>
-              <Text style={styles.saveBtnText}>保存全部记录</Text>
+            <Text style={styles.resultTitle}>逐笔确认后保存</Text>
+            {parsedResults.map((item, i) => {
+              const original = expenses.find(tx => tx.id === item.originalTransactionId);
+              const previousTotal = parsedResults.slice(0, i)
+                .filter(row => row.originalTransactionId === item.originalTransactionId && isAdjustment(row.type))
+                .reduce((sum, row) => row.fullRefund && original
+                  ? Math.max(0, original.amount - (original.adjustment_total ?? 0))
+                  : sum + (Number.isFinite(Number(row.amountText)) ? Number(row.amountText) : 0), 0);
+              return <VoiceDraftCard key={item.rowId} item={item} index={i} categories={categories} accounts={assetAccounts} expenses={expenses}
+                trackingStart={trackingStatus?.startDate} disabled={saving} pendingAdjustmentTotal={previousTotal}
+                onChange={patch => updateDraft(item.rowId, patch)}
+                onRemove={() => { if (!saveLock.current) setParsedResults(previous => previous.filter(row => row.rowId !== item.rowId)); }} />;
+            })}
+            <TouchableOpacity accessibilityRole="button" style={[styles.saveBtn, saving && styles.parseBtnDisabled]} disabled={saving || loading} onPress={handleSaveAll} activeOpacity={0.86}>
+              <Text style={styles.saveBtnText}>{saving ? '保存中…' : `保存以上 ${parsedResults.length} 笔记录`}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
