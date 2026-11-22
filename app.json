@@ -2,7 +2,7 @@
   "expo": {
     "name": "iSave",
     "slug": "bookkeeping-app",
-    "version": "1.3.4",
+    "version": "1.3.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.bookkeeping.app",
-      "versionCode": 134
+      "versionCode": 135
     },
     "web": {
       "favicon": "./assets/favicon.png"

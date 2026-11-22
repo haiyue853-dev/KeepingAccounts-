@@ -4,7 +4,7 @@
 
 ## 📥 下载 Android 安装包
 
-最新版本：[v1.3.3 APK](https://github.com/haiyue853-dev/KeepingAccounts-/releases/download/v1.3.3/iSave-v1.3.3.apk) · [版本说明](https://github.com/haiyue853-dev/KeepingAccounts-/releases/tag/v1.3.3)
+最新版本：[v1.3.5 APK](https://github.com/haiyue853-dev/KeepingAccounts-/releases/download/v1.3.5/iSave-v1.3.5.apk) · [版本说明](https://github.com/haiyue853-dev/KeepingAccounts-/releases/tag/v1.3.5)
 
 同包名、同签名的旧版可以覆盖安装并保留本地数据。请勿先卸载旧版；若系统提示签名不一致，不要卸载以尝试安装，先确认旧版的来源。
 
@@ -122,6 +122,12 @@ src/
 ```
 
 ## 📋 版本更新日志
+
+### v1.3.5 (2026-11-22)
+- ✨ 记账明细显示关联账户图标、名称和该笔之后的账户余额，便于核对账目
+- ✨ 分类详情中的备注排行榜支持查看对应记录，沿用首页明细和操作
+- ✨ 自动添加现金账户，语音记账支持更完整的退款、报销和账户识别
+- ✨ 支持重新开始资产自动计算，优化账户选择及图表显示
 
 ### v1.3.3 (2026-09-27)
 - 🐛 已有银行卡、微信等账户会直接显示在记账页；首次选择时引导启用资产自动计算，修复未启用前完全看不到账户选项的问题

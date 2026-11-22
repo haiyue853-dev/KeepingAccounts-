@@ -9,6 +9,9 @@ export interface Transaction {
   note: string;
   date: string; // YYYY-MM-DD
   asset_account_id?: number | null;
+  asset_account_name?: string | null;
+  asset_account_provider?: string | null;
+  asset_balance_after_cents?: number | null;
   created_at: string;
   updated_at: string;
   adjustment_total?: number;

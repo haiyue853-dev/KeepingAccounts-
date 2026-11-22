@@ -84,7 +84,27 @@ const transactionSelectSql = `
   COALESCE(adj.total, 0) as adjustment_total,
   adj.latest_type as adjustment_type,
   adj.latest_note as adjustment_note,
-  CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE t.amount END as net_amount
+  CASE WHEN t.type = 'expense' THEN ${netExpenseSql} ELSE t.amount END as net_amount,
+  (SELECT a.name FROM asset_accounts a WHERE a.id = t.asset_account_id) AS asset_account_name,
+  (SELECT a.provider FROM asset_accounts a WHERE a.id = t.asset_account_id) AS asset_account_provider,
+  (SELECT a.opening_balance_cents + a.adjustment_cents
+    - COALESCE((SELECT SUM(b.delta_cents) FROM asset_balance_adjustments b
+        WHERE b.account_id = a.id AND (substr(b.created_at, 1, 10) > t.date
+          OR (substr(b.created_at, 1, 10) = t.date AND b.created_at >= t.created_at))), 0)
+    + COALESCE((SELECT SUM(CASE WHEN x.type = 'income' THEN ROUND(x.amount * 100) ELSE -ROUND(x.amount * 100) END)
+        FROM transactions x WHERE x.asset_account_id = a.id
+          AND x.id > COALESCE((SELECT CAST(value AS INTEGER) FROM app_settings WHERE key = 'asset_tracking_baseline_tx_id'), 0)
+          AND x.date >= (SELECT value FROM app_settings WHERE key = 'asset_tracking_start_date')
+          AND (x.date < t.date OR (x.date = t.date AND (x.created_at < t.created_at OR (x.created_at = t.created_at AND x.id <= t.id))))), 0)
+    + COALESCE((SELECT SUM(ROUND(r.amount * 100)) FROM cashback_records r
+        JOIN transactions original ON original.id = r.transaction_id
+        WHERE COALESCE(r.asset_account_id, original.asset_account_id) = a.id
+          AND r.id > COALESCE((SELECT CAST(value AS INTEGER) FROM app_settings WHERE key = 'asset_tracking_baseline_adjustment_id'), 0)
+          AND r.date >= (SELECT value FROM app_settings WHERE key = 'asset_tracking_start_date')
+          AND (r.date < t.date OR (r.date = t.date AND r.created_at < t.created_at))), 0)
+    FROM asset_accounts a WHERE a.id = t.asset_account_id
+      AND t.date >= (SELECT value FROM app_settings WHERE key = 'asset_tracking_start_date')
+      AND t.id > COALESCE((SELECT CAST(value AS INTEGER) FROM app_settings WHERE key = 'asset_tracking_baseline_tx_id'), 0)) AS asset_balance_after_cents
 `;
 
 export class TransactionRepo {
@@ -120,7 +140,7 @@ export class TransactionRepo {
       params.push(filter.category_id);
     }
 
-    sql += ' ORDER BY t.date DESC, t.created_at DESC';
+    sql += ' ORDER BY t.date DESC, t.created_at DESC, t.id DESC';
     return db.getAllAsync<Transaction>(sql, params);
   }
 

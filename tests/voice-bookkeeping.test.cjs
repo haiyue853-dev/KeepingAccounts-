@@ -103,7 +103,7 @@ function fixture() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON');
   const schema = fs.readFileSync(path.resolve(__dirname, '../src/db/database.ts'), 'utf8');
-  for (const name of ['account_books', 'categories', 'transactions', 'app_settings', 'asset_accounts']) {
+  for (const name of ['account_books', 'categories', 'transactions', 'app_settings', 'asset_accounts', 'asset_balance_adjustments']) {
     const match = schema.match(new RegExp('`(CREATE TABLE IF NOT EXISTS ' + name + ' \\([\\s\\S]*?\\))`'));
     sqlite.exec(match[1]);
   }

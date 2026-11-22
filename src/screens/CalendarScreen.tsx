@@ -13,6 +13,7 @@ import { Transaction } from '../models/Transaction';
 import { COLORS, SHADOWS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { CategoryIcon } from '../components/AppIcon';
+import TransactionAccount from '../components/TransactionAccount';
 import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
 
 const ITEM_MARGIN = 2;
@@ -312,6 +313,7 @@ export default function CalendarScreen() {
                     <View style={styles.txInfo}>
                       <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
                       {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
+                      <TransactionAccount transaction={item} />
                     </View>
                     <View style={styles.txRight}>
                       <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>

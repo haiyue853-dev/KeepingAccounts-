@@ -19,6 +19,8 @@ import { showThemedConfirm } from '../components/AlertProvider';
 import { AssetAccountRepo } from '../repositories/AssetAccountRepo';
 import type { AssetAccount } from '../models/AssetAccount';
 import AssetAccountPicker from '../components/AssetAccountPicker';
+import { noteGroupName } from '../utils/noteGroups';
+import TransactionAccount from '../components/TransactionAccount';
 
 interface DayGroup {
   date: string;
@@ -58,6 +60,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const noteFilter = route.name === 'NoteTransactions' ? route.params : null;
   const [summary, setSummary] = useState({ income: 0, expense: 0 });
   const [sections, setSections] = useState<DayGroup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -135,11 +138,16 @@ export default function HomeScreen() {
     const bookId = books[0].id;
     const y = year, m = month;
 
-    setSummary(await TransactionRepo.getMonthlySummary(bookId, y, m));
+    if (!noteFilter) setSummary(await TransactionRepo.getMonthlySummary(bookId, y, m));
 
     const start = `${y}-${String(m).padStart(2, '0')}-01`;
     const end = `${y}-${String(m).padStart(2, '0')}-${new Date(y, m, 0).getDate()}`;
-    const txs = await TransactionRepo.getAll({ book_id: bookId, start_date: start, end_date: end });
+    const txs = (await TransactionRepo.getAll({
+      book_id: bookId,
+      start_date: noteFilter?.dateRange.startDate ?? start,
+      end_date: noteFilter?.dateRange.endDate ?? end,
+      category_id: noteFilter?.categoryId,
+    })).filter((t) => !noteFilter || noteGroupName(t.note) === noteFilter.note);
 
     const map = new Map<string, Transaction[]>();
     for (const t of txs) { (map.get(t.date) || map.set(t.date, []).get(t.date)!).push(t); }
@@ -157,7 +165,7 @@ export default function HomeScreen() {
         };
       })
     );
-  }, [year, month]);
+  }, [year, month, noteFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -328,7 +336,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.headerSurface} />
 
-      <LinearGradient
+      {!noteFilter && <LinearGradient
         colors={[COLORS.headerSurface, '#F4F9FF', COLORS.surface]}
         locations={[0, 0.58, 1]}
         start={{ x: 0, y: 0 }}
@@ -377,9 +385,9 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-      </LinearGradient>
+      </LinearGradient>}
 
-      <View style={styles.funcBar}>
+      {!noteFilter && <View style={styles.funcBar}>
         {[
           { icon: 'paw-outline', label: '账单', screen: 'BillStatistics' },
           { icon: 'wallet-outline', label: '预算', screen: 'Budget' },
@@ -398,7 +406,7 @@ export default function HomeScreen() {
             <Text style={styles.funcLabel}>{item.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </View>}
 
       <SectionList
         ref={listRef}
@@ -448,6 +456,7 @@ export default function HomeScreen() {
               <View style={styles.txInfo}>
                 <Text style={styles.txName}>{item.category_name || '未分类'}</Text>
                 {item.note ? <Text style={styles.txNote}>{item.note}</Text> : null}
+                <TransactionAccount transaction={item} />
               </View>
               <View style={styles.txRight}>
                 <Text style={[styles.txAmount, item.type === 'income' ? styles.income : styles.expense]}>
@@ -472,8 +481,8 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={44} color={COLORS.textLight} />
-            <Text style={styles.emptyText}>本月还没有记录</Text>
-            <Text style={styles.emptyHint}>点击底部 + 号开始记账</Text>
+            <Text style={styles.emptyText}>{noteFilter ? '暂无相关记录' : '本月还没有记录'}</Text>
+            {!noteFilter && <Text style={styles.emptyHint}>点击底部 + 号开始记账</Text>}
           </View>
         }
       />

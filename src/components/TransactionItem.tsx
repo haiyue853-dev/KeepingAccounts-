@@ -4,6 +4,7 @@ import { Transaction } from '../models/Transaction';
 import { COLORS } from '../utils/constants';
 import { formatAmount } from '../utils/formatters';
 import { getAdjustmentLabel, getAdjustmentTotal, getTransactionNetAmount, hasAdjustment } from '../utils/transactionAmounts';
+import TransactionAccount from './TransactionAccount';
 
 interface Props {
   transaction: Transaction;
@@ -30,6 +31,7 @@ export default function TransactionItem({ transaction: t, onPress, onLongPress }
       <View style={styles.info}>
         <Text style={styles.categoryName}>{t.category_name || '未知分类'}</Text>
         {t.note ? <Text style={styles.note} numberOfLines={1}>{t.note}</Text> : null}
+        <TransactionAccount transaction={t} />
       </View>
       <View style={styles.right}>
         <Text style={[styles.amount, { color: isIncome ? COLORS.income : COLORS.expense }]}>

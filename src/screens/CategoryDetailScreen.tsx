@@ -15,6 +15,7 @@ import { formatAmount } from '../utils/formatters';
 import { getTransactionNetAmount } from '../utils/transactionAmounts';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryIcon } from '../components/AppIcon';
+import { noteGroupName } from '../utils/noteGroups';
 
 interface NoteRankItem {
   note: string;
@@ -25,7 +26,7 @@ interface NoteRankItem {
 
 export default function CategoryDetailScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
   const categoryData = route.params?.categoryData as {
@@ -59,7 +60,7 @@ export default function CategoryDetailScreen() {
       let categoryTotal = 0;
 
       transactions.forEach((t) => {
-        const note = t.note || '无备注';
+        const note = noteGroupName(t.note);
         if (!noteGroups[note]) {
           noteGroups[note] = { total: 0, count: 0 };
         }
@@ -120,7 +121,9 @@ export default function CategoryDetailScreen() {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.rankList}>
               {noteRanks.map((item, index) => (
-                <View key={item.note} style={[styles.rankItem, index === noteRanks.length - 1 && styles.rankItemLast]}>
+                <TouchableOpacity key={item.note} accessibilityRole="button" accessibilityLabel={`查看${item.note}的记录`}
+                  onPress={() => navigation.navigate('NoteTransactions', { categoryId: categoryData.id, note: item.note, dateRange })}
+                  style={[styles.rankItem, index === noteRanks.length - 1 && styles.rankItemLast]}>
                   <View style={styles.rankIconBg}>
                     <CategoryIcon categoryName={categoryData.name} iconKey={categoryData.icon} size={18} color={COLORS.text} />
                   </View>
@@ -134,7 +137,7 @@ export default function CategoryDetailScreen() {
                       <Text style={styles.percentageText}>{item.percentage.toFixed(1)}%</Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </ScrollView>

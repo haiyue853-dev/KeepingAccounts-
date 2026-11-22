@@ -161,6 +161,11 @@ export default function AppNavigator() {
         options={{ title: '分类详情', headerTitleStyle: { fontWeight: '600', fontSize: 16 } }}
       />
       <Stack.Screen
+        name="NoteTransactions"
+        component={HomeScreen}
+        options={({ route }: any) => ({ title: route.params?.note || '记录明细', headerTitleStyle: { fontWeight: '600', fontSize: 16 } })}
+      />
+      <Stack.Screen
         name="Asset"
         component={AssetScreen}
         options={{ headerShown: false }}

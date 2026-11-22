@@ -259,3 +259,24 @@ test('failed restart rolls back both the opening balance and tracking boundary',
     assert.deepEqual(await repo.getPeriodTotals(), { income_cents: 0, expense_cents: 10000 });
   } finally { sqlite.close(); }
 });
+
+test('transaction balances follow each account ledger across books, refunds and corrections', async () => {
+  const { repo: assetRepo, sqlite } = await fixture(null);
+  try {
+    sqlite.exec(`CREATE TABLE categories (id INTEGER PRIMARY KEY, name TEXT, icon TEXT);
+      CREATE TABLE transactions (id INTEGER PRIMARY KEY, book_id INTEGER, category_id INTEGER, asset_account_id INTEGER, amount REAL, type TEXT, note TEXT, date TEXT, created_at TEXT, updated_at TEXT);
+      CREATE TABLE cashback_records (id INTEGER PRIMARY KEY, transaction_id INTEGER, asset_account_id INTEGER, amount REAL, type TEXT, note TEXT, date TEXT, created_at TEXT);
+      CREATE TABLE asset_balance_adjustments (id INTEGER PRIMARY KEY, account_id INTEGER, delta_cents INTEGER, balance_cents INTEGER, created_at TEXT);
+      INSERT INTO categories VALUES (1,'餐饮','');
+      INSERT INTO asset_accounts (id,name,provider,balance_cents,opening_balance_cents,adjustment_cents) VALUES (1,'微信','wechat',0,10000,500),(2,'现金','cash',0,2000,0);
+      INSERT INTO app_settings (key,value) VALUES ('asset_accounts_migrated_v1','1'),('asset_tracking_start_date','2026-11-01'),('asset_tracking_baseline_tx_id','1'),('asset_tracking_baseline_adjustment_id','0');
+      INSERT INTO transactions VALUES (1,1,1,1,10,'expense','','2026-10-31','2026-10-31 10:00:00',''),(2,1,1,1,10,'expense','','2026-11-01','2026-11-01 10:00:00',''),(3,2,1,1,20,'expense','','2026-11-01','2026-11-01 11:00:00',''),(4,1,1,2,5,'expense','','2026-11-02','2026-11-02 10:00:00',''),(5,1,1,1,10,'income','','2026-11-03','2026-11-03 10:00:00','');
+      INSERT INTO cashback_records VALUES (1,2,1,3,'refund','','2026-11-02','2026-11-02 09:00:00');
+      INSERT INTO asset_balance_adjustments VALUES (1,1,500,7800,'2026-11-02 12:00:00');`);
+    const db = { getAllAsync: async (sql, args = []) => sqlite.prepare(sql).all(...args) };
+    const { TransactionRepo } = loadTs('src/repositories/TransactionRepo.ts', { '../db/database': { getDatabase: async () => db } });
+    const rows = await TransactionRepo.getAll({ book_id: 1 });
+    assert.deepEqual(rows.map(r => [r.id, r.asset_account_name, r.asset_account_provider, r.asset_balance_after_cents]), [[5,'微信','wechat',8800],[4,'现金','cash',1500],[2,'微信','wechat',9000],[1,'微信','wechat',null]]);
+    assert.deepEqual((await assetRepo.getAll()).map(a => a.balance_cents), [8800,1500]);
+  } finally { sqlite.close(); }
+});
